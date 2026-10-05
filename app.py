@@ -622,7 +622,7 @@ elif page == "提案動機與模式介紹":
         """, unsafe_allow_html=True)
 
 # ==========================================
-# 6. 分頁三：APP 介面展示 (精緻擬真手機版)
+# 6. 分頁三：APP 介面展示 (iframe 完美擬真手機版)
 # ==========================================
 elif page == "APP 介面展示":
     current_r_star = globals().get('R_STAR', 30.5)
@@ -632,61 +632,6 @@ elif page == "APP 介面展示":
     st.markdown("<p style='font-size:13px; color:#0C0E0B; opacity:0.8; font-weight:500;'>在左側控制台調整您的每日健走行為與持續性因子，右側精緻的虛擬手機畫面將即時同步呈現最新數據。</p>", unsafe_allow_html=True)
     st.markdown("---")
     
-    # 注入專屬手機美化 CSS
-    st.markdown("""
-    <style>
-    .iphone-container {
-        width: 310px;
-        background: #111111;
-        border-radius: 42px;
-        padding: 12px;
-        box-shadow: 0 20px 40px rgba(0,0,0,0.2);
-        margin: 0 auto;
-        border: 3px solid #333333;
-    }
-    .iphone-screen {
-        background: #FFFFFF;
-        border-radius: 32px;
-        padding: 18px 14px;
-        min-height: 480px;
-        color: #0C0E0B;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    }
-    .phone-status {
-        font-size: 10px;
-        color: #777777;
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 12px;
-        font-weight: 700;
-    }
-    .phone-card-light {
-        background: #F8F9FA;
-        border: 1px solid #E2E8F0;
-        padding: 12px;
-        border-radius: 14px;
-        margin-bottom: 10px;
-        text-align: center;
-    }
-    .phone-card-green {
-        background: #83A474;
-        color: #FFFFFF;
-        padding: 14px;
-        border-radius: 14px;
-        margin-bottom: 10px;
-        text-align: center;
-    }
-    .phone-card-dark {
-        background: #2D4A22;
-        color: #FFFFFF;
-        padding: 14px;
-        border-radius: 14px;
-        margin-bottom: 10px;
-        text-align: center;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
     col_ui_left, col_ui_right = st.columns([1, 2])
     
     with col_ui_left:
@@ -721,46 +666,36 @@ elif page == "APP 介面展示":
         accumulated_rwa_val = accumulated_rwa_val * (1 + r_w_weekly) + w_pay
 
     with col_ui_right:
-        # 組合精緻的手機外框 HTML 畫面
-        phone_body = f"""
-        <div class="iphone-container">
-            <div class="phone-status">
-                <span>09:41</span>
-                <span>EcoStride OS</span>
-                <span>🔋 100%</span>
-            </div>
-            <div class="iphone-screen">
-        """
-        
+        # 決定手機內部顯示內容
         if "①" in app_tab_view:
-            phone_body += f"""
+            screen_content = f"""
                 <div style="font-size:10px; font-weight:800; color:#83A474; text-align:center; letter-spacing:1px; margin-bottom:8px;">DAILY HEALTH DASHBOARD</div>
                 <div style="text-align:center; margin: 12px 0;">
                     <span style="font-size:32px; font-weight:900; color:#0C0E0B;">{ui_steps:,}</span>
                     <div style="font-size:10px; color:#666; font-weight:600; margin-top:2px;">TODAY'S AVERAGE STEPS</div>
                 </div>
                 <div style="display:flex; gap:8px; margin-bottom:10px;">
-                    <div class="phone-card-light" style="flex:1; margin:0; padding:8px;">
+                    <div style="flex:1; background:#F8F9FA; border:1px solid #E2E8F0; padding:8px; border-radius:12px; text-align:center;">
                         <span style="font-size:9px; color:#666;">預估週達標率</span>
                         <div style="font-size:14px; font-weight:800; color:#2D4A22; margin-top:2px;">{ach_prob_est*100:.1f}%</div>
                     </div>
-                    <div class="phone-card-light" style="flex:1; margin:0; padding:8px;">
+                    <div style="flex:1; background:#F8F9FA; border:1px solid #E2E8F0; padding:8px; border-radius:12px; text-align:center;">
                         <span style="font-size:9px; color:#666;">連續4週加成</span>
                         <div style="font-size:14px; font-weight:800; color:#83A474; margin-top:2px;">+{CFG.streak_bonus*100:.0f}%</div>
                     </div>
                 </div>
-                <div class="phone-card-green">
+                <div style="background:#83A474; color:#FFFFFF; padding:14px; border-radius:14px; text-align:center; margin-bottom:10px;">
                     <span style="font-size:10px; opacity:0.9; font-weight:600;">本週預期獲發回饋金 (R*)</span>
                     <div style="font-size:20px; font-weight:900; margin-top:3px;">NT$ {weekly_expected_reward:.1f} / 週</div>
                 </div>
-                <div style="font-size:9px; color:#666; text-align:center; margin-top:25px; line-height:1.4;">
+                <div style="font-size:9px; color:#666; text-align:center; margin-top:20px; line-height:1.4;">
                     🔒 通過零知識證明 (ZKP) 自動同步 Apple Health / Google Fit 步數。
                 </div>
             """
         elif "②" in app_tab_view:
-            phone_body += f"""
+            screen_content = f"""
                 <div style="font-size:10px; font-weight:800; color:#83A474; text-align:center; letter-spacing:1px; margin-bottom:8px;">RWA GREEN PORTFOLIO</div>
-                <div class="phone-card-light" style="margin: 10px 0; padding: 14px;">
+                <div style="background:#F8F9FA; border:1px solid #E2E8F0; padding:14px; border-radius:14px; text-align:center; margin: 10px 0;">
                     <span style="font-size:10px; color:#666; font-weight:600;">5年累積 STRIDE 資產市值</span>
                     <div style="font-size:22px; font-weight:900; color:#83A474; margin-top:4px;">NT$ {accumulated_rwa_val:,.0f}</div>
                 </div>
@@ -773,13 +708,13 @@ elif page == "APP 介面展示":
                 </div>
             """
         else:
-            phone_body += f"""
+            screen_content = f"""
                 <div style="font-size:10px; font-weight:800; color:#83A474; text-align:center; letter-spacing:1px; margin-bottom:8px;">POLICY & RISK STATUS</div>
-                <div class="phone-card-light" style="margin: 10px 0; padding: 12px; text-align:left;">
+                <div style="background:#F8F9FA; border:1px solid #E2E8F0; padding:12px; border-radius:14px; text-align:left; margin: 10px 0;">
                     <span style="font-size:10px; color:#666;">保單年度與狀態</span>
                     <div style="font-size:14px; font-weight:800; color:#2D4A22; margin-top:2px;">第 3 年度 (在籍有效)</div>
                 </div>
-                <div class="phone-card-dark">
+                <div style="background:#2D4A22; color:#FFFFFF; padding:14px; border-radius:14px; text-align:center; margin-bottom:10px;">
                     <span style="font-size:10px; opacity:0.9; font-weight:600;">大盤預期理賠損失率最佳化</span>
                     <div style="font-size:18px; font-weight:900; margin-top:3px;">74.2% (▼ 0.8%)</div>
                 </div>
@@ -787,25 +722,72 @@ elif page == "APP 介面展示":
                     💡 未滿 2 年解約者帳戶歸回保險準備金，滿 2 年後資產全額歸屬用戶。
                 </div>
             """
-            
-        phone_body += """
+
+        phone_html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+        <style>
+            body {{
+                background-color: transparent;
+                margin: 0;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            }}
+            .iphone-container {{
+                width: 290px;
+                background: #111111;
+                border-radius: 40px;
+                padding: 10px;
+                box-shadow: 0 15px 35px rgba(0,0,0,0.25);
+                border: 3px solid #333333;
+            }}
+            .iphone-screen {{
+                background: #FFFFFF;
+                border-radius: 30px;
+                padding: 16px 12px;
+                min-height: 440px;
+                color: #0C0E0B;
+            }}
+            .phone-status {{
+                font-size: 10px;
+                color: #888888;
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 10px;
+                font-weight: 700;
+            }}
+        </style>
+        </head>
+        <body>
+            <div class="iphone-container">
+                <div class="phone-status">
+                    <span>09:41</span>
+                    <span>EcoStride OS</span>
+                    <span>🔋 100%</span>
+                </div>
+                <div class="iphone-screen">
+                    {screen_content}
+                </div>
             </div>
-        </div>
+        </body>
+        </html>
         """
-        st.markdown(phone_body, unsafe_allow_html=True)
+        
+        st.components.v1.html(phone_html, height=500)
 
     st.markdown("<br>", unsafe_allow_html=True)
     
-    # 底部互動趨勢圖
     fig_app_trend = go.Figure()
     yrs_arr = list(range(1, 6))
     simulated_path = [accumulated_rwa_val * (y/5) * (1.1 if y>1 else 1.0) for y in yrs_arr]
     legacy_path_app = [1194 * y for y in yrs_arr]
     
     fig_app_trend.add_trace(go.Scatter(x=yrs_arr, y=simulated_path, name="EcoStride APP 用戶累積資產", line=dict(color="#83A474", width=3)))
-    fig_app_trend.add_trace(go.Scatter(x=yrs_arr, y=legacy_path_app, name="傳統外溢點數方案 (立即消耗)", line=dict(color="#E53E3E", width=2, dash="dash")))
-    fig_app_trend.update_layout(title="【互動展示】使用者動態行為對應之 5 年資產成長預測", template="plotly_white", height=280, margin=dict(l=30, r=30, t=30, b=30))
-    st.plotly_chart(fig_app_trend, use_container_width=True)
+    fig_app_trend.add_trace(go.Scatter(x=
+                                       
 # ==========================================
     # 🏥 面向二：保險公司端研究
     # ==========================================
