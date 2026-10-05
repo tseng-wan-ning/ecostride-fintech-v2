@@ -1,5 +1,61 @@
+import streamlit as st
+import pandas as pd
+import numpy as np
+import plotly.graph_objects as go
+import time
+import streamlit.components.v1 as components
+from dataclasses import dataclass
+
 # ==========================================
-# 0. 全局環境配置與指定五色高質感 CSS 注入
+# 0. 同學最新版 EcoStride v3 Config 與精算核心
+# ==========================================
+@dataclass(frozen=True)
+class Config:
+    years: int = 10
+    user_years: int = 5
+    n_users: int = 10_000
+    mix: tuple = (0.25, 0.50, 0.25)
+    base_steps: tuple = (8_700, 6_300, 4_300)
+    goal_extra: int = 1_500
+    p_ach_gain: tuple = (0.62, 0.46, 0.27)
+    loss_frame: bool = True
+    loss_mult: float = 1.30
+    ach_kappa: float = 6.0
+    ach_retention: float = 0.80
+    ach_decay_years: float = 1.0
+    rain_weeks: tuple = (17, 24)
+    rain_mult: float = 0.85
+    uplift_ach: float = 1_500
+    uplift_miss: float = 300
+    dropout_y1: tuple = (0.15, 0.25, 0.45)
+    dropout_after: tuple = (0.05, 0.08, 0.15)
+    streak_bonus: float = 0.20
+    gamma: float = 0.20
+    
+    # 綠能與保險對齊參數
+    sto_raise: float = 30_000_000
+    ltv: float = 0.80
+    coupon: float = 0.035
+    insurer_coupon_share: float = 0.10
+    platform_fee: float = 0.0
+    premium: float = 35_000
+    loss_ratio: float = 0.75
+    expense_ratio: float = 0.15
+
+    @property
+    def capex_total(self): return self.sto_raise / self.ltv
+    @property
+    def capacity_kw(self): return self.capex_total / 37_400
+    @property
+    def policy_margin(self): return self.premium * (1 - self.loss_ratio - self.expense_ratio)
+    @property
+    def r_user(self): return self.coupon * (1 - self.insurer_coupon_share) - self.platform_fee
+
+CFG = Config()
+R_STAR_DEFAULT = 30.5  # v3 研究報告校準之預算中立每週回饋
+
+# ==========================================
+# 0-2. 全局環境配置與指定五色高質感 CSS 注入
 # ==========================================
 st.set_page_config(
     page_title="EcoStride | 永續金融生態系研究",
@@ -8,17 +64,14 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 隱藏 Streamlit 預設元素並注入 60-30-10 極簡美學 CSS + 側邊欄「強制去圈、整條變白」高級黑科技
 st.markdown("""
     <style>
-    /* 全局背景色與文字色 */
     .stApp {
         background-color: #F5F7F4;
         color: #0C0E0B;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     }
     
-    /* 側邊欄改用二次色與細線框分隔 */
     .stSidebar {
         background-color: #B7CEAD !important;
         border-right: 1px solid #83A474 !important;
@@ -27,7 +80,6 @@ st.markdown("""
         color: #0C0E0B !important;
     }
     
-    /* 🎯🎯🎯 【無痛終極去圈黑科技】直接消滅所有原生的單選小圓圈 🎯🎯🎯 */
     div[data-testid="stSidebarRadio"] div[role="radiogroup"] label [data-testid="stFiberManualRecord"],
     div[data-testid="stSidebarRadio"] div[role="radiogroup"] label input[type="radio"],
     div[data-testid="stSidebarRadio"] div[role="radiogroup"] label div[class*="st-c"],
@@ -280,7 +332,7 @@ if page == "專案首頁":
     
     st.markdown("""
         <div style='display: flex; justify-content: center; gap: 15px; margin-bottom: 40px;'>
-            <span style='background-color: #FFFFFF; color: #0C0E0B; padding: 8px 20px; border-radius: 24px; font-size: 13px; border: 1px solid #B7CEAD; font-weight: 600;'>國立清學大學 金融科技專題研究</span>
+            <span style='background-color: #FFFFFF; color: #0C0E0B; padding: 8px 20px; border-radius: 24px; font-size: 13px; border: 1px solid #B7CEAD; font-weight: 600;'>國立清華大學 金融科技專題研究</span>
             <span style='background-color: #83A474; color: #F5F7F4; padding: 8px 20px; border-radius: 24px; font-size: 13px; font-weight: 600;'>Quantitative Finance & Information Management</span>
         </div>
         """, unsafe_allow_html=True)
@@ -569,7 +621,6 @@ elif page == "提案動機與模式介紹":
         針對資產期限較長之特性，擬引入自動化造市商機制建立微型資產流動性池；在個資隱私上，<b>採用零知識證明技術（Zero-Knowledge Proofs, ZKP）保護隱私</b>，確保代幣化資產之發行、存管與存管皆符合國際監管標準。
         """, unsafe_allow_html=True)
 
-
 # ==========================================
 # 6. 分頁三：APP 介面展示
 # ==========================================
@@ -650,7 +701,7 @@ elif page == "APP 介面展示":
                         <div style="font-size:11px; color:#0C0E0B; line-height:1.7; background-color:#F5F7F4; padding:12px; border-radius:10px; border:1px solid #B7CEAD;">
                             <b>大盤護城河邊際：</b><br>
                             • 預算中立回饋: R*=30.5元/週<br>
-                            • 基準初始損失率: 75%[cite: 12]
+                            • 基準初始損失率: 75%
                         </div>
                     </div>
                 </div>
@@ -674,7 +725,7 @@ elif page == "APP 介面展示":
                         <div style="font-size:11px; background-color:#F5F7F4; padding:12px; border-radius:10px; border:1px solid #B7CEAD; line-height:1.6;">
                             <b>錨定底層資產：</b><br>
                             國泰證券 — 陽光綠益太陽能案場<br>
-                            • STO 基礎票息: 3.5%[cite: 12]<br>
+                            • STO 基礎票息: 3.5%<br>
                             • 跨期資產利得成長: 5.0%
                         </div>
                     </div>
@@ -696,7 +747,6 @@ elif page == "相關研究成果":
         st.markdown("<div style='background-color:#FFFFFF; border:1px solid #B7CEAD; padding:24px; border-radius:14px;'>", unsafe_allow_html=True)
         st.markdown("<h4 style='color:#0C0E0B !important; margin-top:0; font-weight:800; border-bottom:1px solid #eee; padding-bottom:8px;'>v3 全域精算控制台</h4>", unsafe_allow_html=True)
         
-        # v3 互動參數控制 (完全對齊同學 v3 的變數)
         param_r_star = st.slider("每週預算中立回饋 R* (元/達標週)", 20.0, 50.0, R_STAR_DEFAULT, 1.0)
         param_steps_inc = st.slider("保戶平均健走提升率", 0.05, 0.50, 0.20, 0.05)
         param_consistency = st.slider("全域行為穩定度因子", 0.30, 1.00, 0.75, 0.05)
@@ -709,8 +759,6 @@ elif page == "相關研究成果":
     with col_res_right:
         metric_slot1 = st.empty()
         
-        # 🎯 嚴格對齊同學 v3 程式碼邏輯：動態計算保險公司 NPV 不輸機率與三方共贏機率
-        # 依據同學程式中 R* 與健走提升率對保險公司 NPV 現值的邊際敏感度即時連動計算：
         base_win_ratio = 67.3 + (param_r_star - 30.5) * -0.8 + (param_steps_inc - 0.20) * 35 + (param_consistency - 0.75) * 25
         if "極端降雨" in param_rain_shock:
             base_win_ratio -= 15.0
@@ -718,13 +766,11 @@ elif page == "相關研究成果":
             base_win_ratio += 5.0
         base_win_ratio = max(5.0, min(99.8, base_win_ratio))
 
-        # 🎯 保險公司 10 年 NPV 不輸現行方案機率：會隨著 R* 增加（初期支出加重）而下降，隨著步數提升率增加（理賠節省增加）而上升
         dynamic_ins_win = 67.0 + (param_steps_inc - 0.20) * 45 + (param_consistency - 0.75) * 18 - (param_r_star - 30.5) * 1.8
         if "極端降雨" in param_rain_shock:
             dynamic_ins_win -= 4.0
         dynamic_ins_win = max(10.0, min(99.0, dynamic_ins_win))
 
-        # 綠能 STO 全成本利率與 Medium 帳戶價值動態連動
         base_wacc = 3.95 - (param_steps_inc - 0.20) * 0.4
         base_wealth = 4799 * (param_r_star / 30.5) * (param_consistency / 0.75)
         
@@ -763,6 +809,7 @@ elif page == "相關研究成果":
     ])
     
     years_axis = [f"第 {i} 年" for i in range(11)]
+
     # ==========================================
     # 🌿 面向一：消費者（用戶）子分頁
     # ==========================================
@@ -838,17 +885,15 @@ elif page == "相關研究成果":
         fig_energy.update_layout(title=f"案場償債覆蓋率 (DSCR) 分布 — {stress_test_mode}", template="plotly_white", height=320, yaxis=dict(range=[1.0, 1.4], title="DSCR 比率 (安全門檻 1.1)"))
         st.plotly_chart(fig_energy, use_container_width=True)
 
-# ==========================================
-    # 🔄 面向四：整體循環模式 (綠色醒目選單與動態沙盤)
+    # ==========================================
+    # 🔄 面向四：整體循環模式
     # ==========================================
     with tab_res4:
         st.markdown("<h4 style='color:#2D4A22 !important; font-weight:800; margin-top:10px;'>生態系成功啟動之三方共贏機率與邊界條件 (v3 互動沙盤)</h4>", unsafe_allow_html=True)
-        st.markdown("<p style='font-size:13px; color:#555;'>您可以<b>直接調整下方參數滑桿與氣候情境</b>。當共贏機率低於 50% 時，儀表板將自動顯示為嚴格的<b>紅色警戒</b>；高於 50% 則呈現<b>綠色高效運轉</b>：</p>", unsafe_allow_html=True)
+        st.markdown("<p style='font-size:13px; color:#555;'>您可以直接調整下方參數滑桿與氣候情境。當共贏機率低於 50% 時，儀表板將自動顯示為嚴格的<b>紅色警戒</b>；高於 50% 則呈現<b>綠色高效運轉</b>：</p>", unsafe_allow_html=True)
         
-        # 🎯 注入氣候選單專屬綠色系醒目化 CSS
         st.markdown("""
             <style>
-            /* 針對氣候情境選單外框進行綠色高質感化包裝 */
             div[data-baseweb="select"] > div {
                 background-color: #F0F4EC !important;
                 border: 1.5px solid #83A474 !important;
@@ -861,40 +906,37 @@ elif page == "相關研究成果":
             </style>
             """, unsafe_allow_html=True)
 
-        # 🎯 面向四專屬參數調整控制台
         st.markdown("<div style='background-color:#FFFFFF; border:1px solid #B7CEAD; padding:20px; border-radius:12px; margin-bottom:20px;'>", unsafe_allow_html=True)
         st.markdown("<b style='color:#2D4A22; font-size:15px;'>🎛️ v3 聯立動態沙盤參數控制台</b>", unsafe_allow_html=True)
         
         col_c1, col_c2 = st.columns(2)
         with col_c1:
-            tab4_r_star = st.slider("每週預算中立回饋 R* (元/達標週)", 20.0, 50.0, R_STAR_DEFAULT, 1.0, key="t4_r_v3")
-            tab4_steps_inc = st.slider("保戶平均健走提升率", 0.05, 0.50, 0.20, 0.05, key="t4_s_v3")
+            tab4_r_star = st.slider("每週預算中立回饋 R* (元/達標週)", 20.0, 50.0, param_r_star, 1.0, key="t4_r_v3")
+            tab4_steps_inc = st.slider("保戶平均健走提升率", 0.05, 0.50, param_steps_inc, 0.05, key="t4_s_v3")
         with col_c2:
-            tab4_consistency = st.slider("全域行為穩定度因子", 0.30, 1.00, 0.75, 0.05, key="t4_c_v3")
+            tab4_consistency = st.slider("全域行為穩定度因子", 0.30, 1.00, param_consistency, 0.05, key="t4_c_v3")
             st.markdown("<div style='font-size: 14px; font-weight: 600; color: #2D4A22; margin-bottom: 5px;'>🌱 季節氣候衝擊情境 (壓力測試)</div>", unsafe_allow_html=True)
             tab4_rain_shock = st.selectbox("", ["梅雨/高日照自然波動 (標準 v3)", "極端降雨氣候衝擊 (-35% 發電)", "晴雨交替穩定情境"], key="t4_rain_v3", label_visibility="collapsed")
         st.markdown("</div>", unsafe_allow_html=True)
 
-        # 🎯 完全對齊同學 v3 的動態聯立計算公式
-        dynamic_win_ratio = 67.3 + (tab4_r_star - 30.5) * -0.8 + (tab4_steps_inc - 0.20) * 35 + (tab4_consistency - 0.75) * 25
+        dynamic_win_ratio_t4 = 67.3 + (tab4_r_star - 30.5) * -0.8 + (tab4_steps_inc - 0.20) * 35 + (tab4_consistency - 0.75) * 25
         if "極端降雨" in tab4_rain_shock:
-            dynamic_win_ratio -= 15.0
+            dynamic_win_ratio_t4 -= 15.0
         elif "晴雨交替" in tab4_rain_shock:
-            dynamic_win_ratio += 5.0
-        dynamic_win_ratio = max(5.0, min(99.8, dynamic_win_ratio))
+            dynamic_win_ratio_t4 += 5.0
+        dynamic_win_ratio_t4 = max(5.0, min(99.8, dynamic_win_ratio_t4))
 
-        dynamic_ins_win = 67.0 + (tab4_steps_inc - 0.20) * 45 + (tab4_consistency - 0.75) * 18
-        if tab4_r_star > 40:
-            dynamic_ins_win -= (tab4_r_star - 40) * 2.0
-        dynamic_ins_win = max(10.0, min(99.0, dynamic_ins_win))
+        dynamic_ins_win_t4 = 67.0 + (tab4_steps_inc - 0.20) * 45 + (tab4_consistency - 0.75) * 18 - (tab4_r_star - 30.5) * 1.8
+        if "極端降雨" in tab4_rain_shock:
+            dynamic_ins_win_t4 -= 4.0
+        dynamic_ins_win_t4 = max(10.0, min(99.0, dynamic_ins_win_t4))
 
-        # 🎯 嚴格紅綠二分法邏輯：低於 50% 絕對顯示為紅色，高於等於 50% 顯示為綠色
-        if dynamic_win_ratio >= 50.0:
-            gauge_bar_color = "#83A474"  # 綠色 (共贏安全區間)
+        if dynamic_win_ratio_t4 >= 50.0:
+            gauge_bar_color = "#83A474"
             gauge_bg_steps = [{'range': [0, 50], 'color': '#FFF5F5'}, {'range': [50, 100], 'color': '#F5F7F4'}]
             status_badge = "<span style='color: #83A474; font-weight: 800;'>🟢 飛輪高效運轉（三方共贏達標）</span>"
         else:
-            gauge_bar_color = "#E53E3E"  # 紅色 (低於 50% 嚴格警戒區)
+            gauge_bar_color = "#E53E3E"
             gauge_bg_steps = [{'range': [0, 100], 'color': '#FFF5F5'}]
             status_badge = "<span style='color: #E53E3E; font-weight: 800;'>🔴 警示：共贏機率低於 50% 邊界，面臨財務赤字風險</span>"
 
@@ -903,7 +945,7 @@ elif page == "相關研究成果":
         with col_res_viz:
             fig_gauge = go.Figure(go.Indicator(
                 mode = "gauge+number",
-                value = dynamic_win_ratio,
+                value = dynamic_win_ratio_t4,
                 domain = {'x': [0, 1], 'y': [0, 1]},
                 number = {'suffix': '%', 'font': {'size': 32, 'color': gauge_bar_color}},
                 gauge = {
@@ -933,8 +975,8 @@ elif page == "相關研究成果":
                     • 行為持續性因子: <b>{tab4_consistency}</b><br>
                     • 氣候季節模擬情境: <b>{tab4_rain_shock}</b><br>
                     <hr style="margin: 10px 0; border-top: 1px solid #E2E8F0;">
-                    ➔ <b>動態總體共贏勝率：<span style="color: {gauge_bar_color}; font-size: 24px; font-weight: 900;">{dynamic_win_ratio:.1f}%</span></b><br>
-                    ➔ 保險公司 10 年不輸現行方案機率：<b>{dynamic_ins_win:.1f}%</b><br>
+                    ➔ <b>動態總體共贏勝率：<span style="color: {gauge_bar_color}; font-size: 24px; font-weight: 900;">{dynamic_win_ratio_t4:.1f}%</span></b><br>
+                    ➔ 保險公司 10 年不輸現行方案機率：<b>{dynamic_ins_win_t4:.1f}%</b><br>
                     ➔ 綠能案場償債違約機率：<b>0.0% (DSCR > 1.1)</b><br>
                     <div style="margin-top: 10px; padding: 8px 12px; background-color: #F5F7F4; border-radius: 8px; border-left: 4px solid {gauge_bar_color};">
                         狀態判定：{status_badge}
@@ -942,6 +984,7 @@ elif page == "相關研究成果":
                 </div>
             </div>
             """, unsafe_allow_html=True)
+
 # ==========================================
 # 加分項：代碼與公式互鎖
 # ==========================================
