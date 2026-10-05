@@ -811,95 +811,134 @@ elif page == "相關研究成果":
     years_axis = [f"第 {i} 年" for i in range(11)]
 
 # ==========================================
-    # 🌿 面向一：消費者端研究 (對齊同學最新版個體與族群模擬)
+    # 🌿 面向一：消費者端研究 (對齊同學最新版後台模擬與圖像化)
     # ==========================================
     with tab_res1:
-        st.markdown("<h4 style='color:#2D4A22 !important; font-weight:800; margin-top:10px;'>消費者端：行為資本化、財富分化與普惠金融實證</h4>", unsafe_allow_html=True)
-        st.markdown("<p style='font-size:13px; color:#555;'>依據同學提供的個體逐週模擬與族群模型（模擬 10,000 名保戶在不同運動活躍度下的複利表現與門檻達成率）：</p>", unsafe_allow_html=True)
+        st.markdown("<h4 style='color:#2D4A22 !important; font-weight:800; margin-top:10px;'>消費者行為財富分化與普惠資產累積動態沙盤</h4>", unsafe_allow_html=True)
+        st.markdown("<p style='font-size:13px; color:#555;'>依據同學提供的後台個體逐週模擬（<code>simulate_users</code>）與族群模型引擎，動態檢視不同運動族群在 5 年參與期內的生產性綠色資產複利累積與普惠達成率：</p>", unsafe_allow_html=True)
         
-        # 互動參數控制面板
-        st.markdown("<div style='background-color:#FFFFFF; border:1px solid #B7CEAD; padding:18px; border-radius:12px; margin-bottom:20px;'>", unsafe_allow_html=True)
-        st.markdown("<b style='color:#2D4A22; font-size:14px;'>🎛️ 消費者端互動模擬控制台</b>", unsafe_allow_html=True)
-        
-        col_u1, col_u2 = st.columns(2)
+        # 內嵌同學後台的輔助精算函式與參數，確保完全自包含且不報錯
+        if 'ach_mean' not in globals():
+            def ach_mean_local(cfg, draws, g):
+                return np.clip(cfg.p_ach_gain[g] * draws["ach_mult"] * draws["lf_mult"], 0.01, 0.95)
+
+        # 互動控制面板
+        col_u1, col_u2, col_u3 = st.columns(3)
         with col_u1:
-            sim_r_star = st.slider("每週達標回饋金額 R* (元/週)", 20.0, 50.0, float(R_STAR_DEFAULT), 1.0, key="tab1_r_slider")
+            interactive_r = st.slider("每週回饋 R* (元/達標週)", 10.0, 60.0, float(R_STAR_DEFAULT), 1.0, key="tab1_r_slider")
         with col_u2:
-            target_profile_view = st.selectbox("選擇觀測族群深度分析：", ["全部綜合對比", "High 高活躍族群", "Medium 典型保戶", "Low 低活躍族群"], key="tab1_profile_select")
-        st.markdown("</div>", unsafe_allow_html=True)
+            interactive_years = st.slider("資產觀測期 (年)", 1, 5, 5, 1, key="tab1_years_slider")
+        with col_u3:
+            profile_view_mode = st.selectbox("觀測運動特徵族群", ["全體總覽 (High / Medium / Low)", "High 高活躍族群", "Medium 典型保戶", "Low 低活躍族群"], key="tab1_profile_select")
 
-        # 依據同學模型計算不同族群的 5 年期資產與門檻達成率基準
-        profile_data = {
-            "High 高活躍族群": {"users": 2500, "stay_rate": 0.85, "avg_ach": 0.68, "wallet_avg": 6646, "median": 6420, "p10": 4100, "p90": 9800, "t5k_pct": 98.5, "t10k_pct": 42.0},
-            "Medium 典型保戶": {"users": 5000, "stay_rate": 0.72, "avg_ach": 0.51, "wallet_avg": 4799, "median": 4650, "p10": 2800, "p90": 7200, "t5k_pct": 76.0, "t10k_pct": 18.0},
-            "Low 低活躍族群": {"users": 2500, "stay_rate": 0.55, "avg_ach": 0.30, "wallet_avg": 2713, "median": 2550, "p10": 1400, "p90": 4300, "t5k_pct": 34.0, "t10k_pct": 3.5}
-        }
-
-        # 動態縮放系數（根據使用者調整的 R* 進行即時等比縮放）
-        scale_factor = sim_r_star / R_STAR_DEFAULT
-
-        # 顯示研究 1 & 3 的族群分化與百分位表格
-        st.markdown("<b style='color:#2D4A22; font-size:15px;'>📊  дослід 1 & 3：第 5 年期各族群資產分布與參與率實證矩陣</b>", unsafe_allow_html=True)
+        # 呼叫同學後台的個體與族群模擬引擎
+        @st.cache_data
+        def run_cached_user_sim(r_val):
+            return simulate_users(CFG, R=r_val, seed=2026)
         
-        table_rows = []
-        for name, p_info in profile_data.items():
-            scaled_wallet = p_info["wallet_avg"] * scale_factor
-            scaled_median = p_info["median"] * scale_factor
-            scaled_p10 = p_info["p10"] * scale_factor
-            scaled_p90 = p_info["p90"] * scale_factor
-            table_rows.append({
-                "族群": name,
-                "人數占比": f"{p_info['users']:,} 人 ({p_info['users']/10000*100:.0f}%)",
-                "5年全程參與率": f"{p_info['stay_rate']*100:.1f}%",
-                "平均每週達標率": f"{p_info['avg_ach']*100:.1f}%",
-                "平均帳戶價值 (NT$)": f"NT$ {scaled_wallet:,.0f}",
-                "中位數 (NT$)": f"NT$ {scaled_median:,.0f}",
-                "P10～P90 區間": f"NT$ {scaled_p10:,.0f} ～ NT$ {scaled_p90:,.0f}"
+        sim_results = run_cached_user_sim(interactive_r)
+        v_target = sim_results["value"][interactive_years]
+        stay_mask = (sim_results["t_drop"] >= interactive_years) & (sim_results["t_lapse"] >= interactive_years)
+        
+        # 即時計算各族群統計數據
+        profile_stats = []
+        for g_idx, g_name in enumerate(PROFILES):
+            mask_g = sim_results["prof"] == g_idx
+            mask_stay = mask_g & stay_mask
+            profile_stats.append({
+                "族群": g_name,
+                "人數占比": f"{mask_g.mean()*100:.0f}%",
+                "全程參與率": f"{mask_stay.mean()*100:.1f}%",
+                "平均帳戶價值(含退出)": v_target[mask_g].mean(),
+                "全程參與者平均": v_target[mask_stay].mean() if mask_stay.any() else 0,
+                "P90 頂尖資產": np.percentile(v_target[mask_stay], 90) if mask_stay.any() else 0
             })
-        
-        df_study1 = pd.DataFrame(table_rows).set_index("族群")
-        st.dataframe(df_study1, use_container_width=True)
+        df_stats = pd.DataFrame(profile_stats).set_index("族群")
+
+        # 上方精美計量卡片
+        col_c1, col_c2, col_c3 = st.columns(3)
+        with col_c1:
+            st.markdown(f"""
+            <div class="metric-card" style="border-top: 4px solid #83A474;">
+                <div class="metric-value-green">NT$ {v_target[sim_results["prof"]==1].mean():,.0f}</div>
+                <div class="metric-label">Medium 典型保戶平均資產 ({interactive_years}年)</div>
+            </div>
+            """, unsafe_allow_html=True)
+        with col_c2:
+            st.markdown(f"""
+            <div class="metric-card" style="border-top: 4px solid #0C0E0B;">
+                <div class="metric-value-blue">{(stay_mask[sim_results["prof"]==1]).mean()*100:.1f}%</div>
+                <div class="metric-label">Medium 族群長期續留率</div>
+            </div>
+            """, unsafe_allow_html=True)
+        with col_c3:
+            st.markdown(f"""
+            <div class="metric-card" style="border-top: 4px solid #92BA80;">
+                <div class="metric-value-green">{ (sim_results["t5k"] <= interactive_years).mean()*100:.1f}%</div>
+                <div class="metric-label">全體用戶達投資門檻 ($5,000) 比例</div>
+            </div>
+            """, unsafe_allow_html=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
+
+        # 圖像化呈現一：互動式跨期複利資產成長軌跡圖 (對齊同學研究 2)
+        yrs_axis = list(range(1, CFG.years + 1))
+        fig_asset = go.Figure()
         
-        # 顯示研究 2：EcoStride vs 傳統點數方案跨期比較圖表
-        col_chart1, col_chart2 = st.columns(2)
+        # 繪製 EcoStride 各族群或平均軌跡
+        avg_path = [sim_results["value"][y].mean() for y in range(1, CFG.years + 1)]
+        medium_stay_path = [sim_results["value"][y][(sim_results["prof"]==1) & (sim_results["t_drop"]>=y) & (sim_results["t_lapse"]>=y)].mean() for y in range(1, CFG.years + 1)]
+        legacy_path = cen["legacy_value"][0][:CFG.years]
         
-        years_arr = [f"第 {y} 年" for y in range(1, 11)]
-        eco_path = [4799 * scale_factor * (y/5) if y<=5 else (4799 * scale_factor) + (y-5)*(4799 * scale_factor / 5)*0.85 for y in range(1, 11)]
-        legacy_path = [1194 * (y/5) if y<=5 else 1194 + (y-5)*190 for y in range(1, 11)]
+        fig_asset.add_trace(go.Scatter(x=yrs_axis, y=avg_path, name="EcoStride 全體平均資產市值", line=dict(color="#83A474", width=4)))
+        fig_asset.add_trace(go.Scatter(x=yrs_axis, y=medium_stay_path, name="EcoStride (Medium 典型保戶, 全程參與)", line=dict(color="#2D4A22", width=3, dash="dot")))
+        fig_asset.add_trace(go.Scatter(x=yrs_axis, y=legacy_path, name="傳統點數方案 (立即消費累計)", line=dict(color="#E53E3E", width=2, dash="dash")))
+        
+        fig_asset.update_layout(
+            title=f"【研究 2】每位參加者平均累積價值對比 (R* = {interactive_r:.1f} 元／週)",
+            template="plotly_white",
+            height=380,
+            xaxis=dict(title="年度 (Year)"),
+            yaxis=dict(title="累積資產市值 (NT$)"),
+            margin=dict(l=40, r=40, t=40, b=40)
+        )
+        st.plotly_chart(fig_asset, use_container_width=True)
 
-        with col_chart1:
-            st.markdown("<b style='color:#2D4A22; font-size:15px;'>📈 研究 2：EcoStride 複利資產 vs 傳統點數方案價值軌跡</b>", unsafe_allow_html=True)
-            fig_study2 = go.Figure()
-            fig_study2.add_trace(go.Scatter(x=years_arr, y=eco_path, name="EcoStride 生產性資產平均帳戶", line=dict(color="#83A474", width=3.5)))
-            fig_study2.add_trace(go.Scatter(x=years_arr, y=legacy_path, name="現行傳統點數方案 (即時消費)", line=dict(color="#E53E3E", dash="dash", width=2.5)))
-            fig_study2.update_layout(template="plotly_white", height=320, margin=dict(l=20, r=20, t=20, b=20), yaxis=dict(title="累積價值 (NT$)"))
-            st.plotly_chart(fig_study2, use_container_width=True)
+        # 圖像化呈現二：各族群資產分布箱形圖 (對齊同學研究 1 & 3)
+        col_g1, col_g2 = st.columns([1.2, 1])
+        
+        with col_g1:
+            fig_box = go.Figure()
+            for g_idx, g_name in enumerate(PROFILES):
+                subset_vals = v_target[(sim_results["prof"] == g_idx) & stay_mask]
+                fig_box.add_trace(go.Box(
+                    y=subset_vals,
+                    name=g_name,
+                    marker_color=PCOL[g_idx],
+                    boxmean=True
+                ))
+            fig_box.update_layout(
+                title=f"【研究 1 & 3】第 {interactive_years} 年全程參與者資產分化箱形圖",
+                template="plotly_white",
+                height=340,
+                yaxis=dict(title="帳戶總市值 (NT$)"),
+                showlegend=False
+            )
+            st.plotly_chart(fig_box, use_container_width=True)
 
-        with col_chart2:
-            st.markdown("<b style='color:#2D4A22; font-size:15px;'>🎯 研究 5：零資本達成投資門檻比例 (普惠金融實證)</b>", unsafe_allow_html=True)
-            
-            # 研究 5 柱狀圖：達到 5,000 元與 10,000 元門檻的比例
-            categories = ['High 族群', 'Medium 族群', 'Low 族群']
-            t5k_vals = [p["t5k_pct"] for p in profile_data.values()]
-            t10k_vals = [p["t10k_pct"] for p in profile_data.values()]
-            
-            fig_study5 = go.Figure()
-            fig_study5.add_trace(go.Bar(name='5年內達 NT$ 5,000 門檻 (%)', x=categories, y=t5k_vals, marker_color='#83A474'))
-            fig_study5.add_trace(go.Bar(name='5年內達 NT$ 10,000 門檻 (%)', x=categories, y=t10k_vals, marker_color='#2D4A22'))
-            fig_study5.update_layout(barmode='group', template="plotly_white", height=320, margin=dict(l=20, r=20, t=20, b=20), yaxis=dict(title="達成率 (%)"))
-            st.plotly_chart(fig_study5, use_container_width=True)
+        with col_g2:
+            st.markdown("<h5 style='color:#2D4A22; margin-top:5px;'>族群資產分化精算摘要表</h5>", unsafe_allow_html=True)
+            st.markdown("<p style='font-size:12px; color:#555;'>個人化基準讓每個人都和自己比，大幅縮小資產差距：</p>", unsafe_allow_html=True)
+            st.dataframe(df_stats[["人數占比", "全程參與率", "全程參與者平均"]], use_container_width=True)
 
+        # 底部洞察卡片
         st.markdown(f"""
-        <div class='alert-card'>
-            <b>【消費者端研究總結解讀】</b><br>
-            • <b>個人化基準與財富縮小</b>：透過個人化基準設定（與自己過去步數比），High 與 Low 族群的帳戶差距縮小至 2.4 倍，有效避免不公平的財富剝奪。<br>
-            • <b>複利超越傳統方案</b>：在預算中立回饋（$R^* = {sim_r_star}$ 元）下，EcoStride 結合 3.5% 票息再投資，使參加者帳戶價值在第 5 年即顯著超越傳統點數方案達近 2.5 倍。<br>
-            • <b>普惠金融落實</b>：典型保戶（Medium）在 5 年內有 <b>76.0%</b> 的機率能完全靠日常健康健走無痛累積達 5,000 元投資門檻，徹底打破高品質綠色資產的資本排他性。
+        <div class="alert-card">
+            <b>【消費者端研究核心結論】</b> 透過每週達標制（$R^* = {interactive_r:.1f}$ 元）與 3.5% 綠能實體資產票息再投資，
+            參加者在第 {interactive_years} 年所累積的生產性資本顯著超越傳統外溢點數方案。
+            個人化基準設計成功消弭了因先天體能差異導致的資產鴻溝，使各族群皆能享有公平且具複利增值之永續紅利。
         </div>
         """, unsafe_allow_html=True)
-
 # ==========================================
     # 🏥 面向二：保險公司端研究
     # ==========================================
