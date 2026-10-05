@@ -816,13 +816,29 @@ elif page == "相關研究成果":
         st.plotly_chart(fig_energy, use_container_width=True)
 
 # ==========================================
-    # 🔄 面向四：整體循環模式 (嚴格對齊同學 v3 程式與紅綠二分法)
+    # 🔄 面向四：整體循環模式 (綠色醒目選單與動態沙盤)
     # ==========================================
     with tab_res4:
         st.markdown("<h4 style='color:#2D4A22 !important; font-weight:800; margin-top:10px;'>生態系成功啟動之三方共贏機率與邊界條件 (v3 互動沙盤)</h4>", unsafe_allow_html=True)
-        st.markdown("<p style='font-size:13px; color:#555;'>依據同學 v3 核心模型，您可以<b>直接調整下方參數滑桿</b>。當共贏機率低於 50% 時，儀表板將自動顯示為嚴格的<b>紅色警戒</b>；高於 50% 則呈現<b>綠色高效運轉</b>：</p>", unsafe_allow_html=True)
+        st.markdown("<p style='font-size:13px; color:#555;'>依據同學 v3 核心模型，您可以<b>直接調整下方參數滑桿與氣候情境</b>。當共贏機率低於 50% 時，儀表板將自動顯示為嚴格的<b>紅色警戒</b>；高於 50% 則呈現<b>綠色高效運轉</b>：</p>", unsafe_allow_html=True)
         
-        # 🎯 面向四專屬參數調整控制台（嚴格對齊同學 v3 變數）
+        # 🎯 注入氣候選單專屬綠色系醒目化 CSS
+        st.markdown("""
+            <style>
+            /* 針對氣候情境選單外框進行綠色高質感化包裝 */
+            div[data-baseweb="select"] > div {
+                background-color: #F0F4EC !important;
+                border: 1.5px solid #83A474 !important;
+                border-radius: 8px !important;
+                font-weight: 600 !important;
+            }
+            div[data-baseweb="select"] span {
+                color: #2D4A22 !important;
+            }
+            </style>
+            """, unsafe_allow_html=True)
+
+        # 🎯 面向四專屬參數調整控制台
         st.markdown("<div style='background-color:#FFFFFF; border:1px solid #B7CEAD; padding:20px; border-radius:12px; margin-bottom:20px;'>", unsafe_allow_html=True)
         st.markdown("<b style='color:#2D4A22; font-size:15px;'>🎛️ v3 聯立動態沙盤參數控制台</b>", unsafe_allow_html=True)
         
@@ -832,7 +848,8 @@ elif page == "相關研究成果":
             tab4_steps_inc = st.slider("保戶平均健走提升率", 0.05, 0.50, 0.20, 0.05, key="t4_s_v3")
         with col_c2:
             tab4_consistency = st.slider("全域行為穩定度因子", 0.30, 1.00, 0.75, 0.05, key="t4_c_v3")
-            tab4_rain_shock = st.selectbox("季節氣候衝擊情境", ["梅雨/高日照自然波動 (標準 v3)", "極端降雨氣候衝擊 (-35% 發電)", "晴雨交替穩定情境"], key="t4_rain_v3")
+            st.markdown("<div style='font-size: 14px; font-weight: 600; color: #2D4A22; margin-bottom: 5px;'>🌱 季節氣候衝擊情境 (壓力測試)</div>", unsafe_allow_html=True)
+            tab4_rain_shock = st.selectbox("", ["梅雨/高日照自然波動 (標準 v3)", "極端降雨氣候衝擊 (-35% 發電)", "晴雨交替穩定情境"], key="t4_rain_v3", label_visibility="collapsed")
         st.markdown("</div>", unsafe_allow_html=True)
 
         # 🎯 完全對齊同學 v3 的動態聯立計算公式
