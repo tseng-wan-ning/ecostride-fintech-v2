@@ -896,13 +896,13 @@ elif page == "相關研究成果":
         """, unsafe_allow_html=True)
 
 # ==========================================
-    # ⚡ 面向三：綠能產業端研究 (getattr 屬性安全防護版)
+    # ⚡ 面向三：綠能產業端研究 (修復滑桿聯動連動版)
     # ==========================================
     with tab_res3:
         st.markdown("<h4 style='color:#2D4A22 !important; font-weight:800; margin-top:10px;'>綠能電廠 20 年現金流瀑布與 DSCR 壓力測試</h4>", unsafe_allow_html=True)
-        st.markdown("<p style='font-size:13px; color:#555;'>依據後台蒙地卡羅模組（含發電氣候變異、颱風毀損機率、MMRA 變流器汰換提撥與 DSCR 償債覆蓋率計算）：</p>", unsafe_allow_html=True)
+        st.markdown("<p style='font-size:13px; color:#555;'>依據後台蒙地卡羅模組（含發電氣候變異、動態颱風毀損機率、MMRA 變流器汰換提撥與 DSCR 償債覆蓋率計算）：</p>", unsafe_allow_html=True)
         
-        # 安全宣告內部精算函式，並全面使用 getattr 防止 Config 屬性缺失報錯
+        # 宣告內部精算函式
         if 'annuity' not in globals():
             def annuity(P, r, n):
                 return P * r / (1 - (1 + r) ** -n)
@@ -922,8 +922,9 @@ elif page == "相關研究成果":
                     hi = np.where(left, hi, mid)
                 return (lo + hi) / 2
 
+        # 升級：接收 typhoon_prob 參數，讓滑桿能真正控制氣候災害模擬
         if 'simulate_developer' not in globals():
-            def simulate_developer(cfg, n, seed, rate, admin=0.0, issue_cost=0.0):
+            def simulate_developer(cfg, n, seed, rate, typhoon_prob=0.05, admin=0.0, issue_cost=0.0):
                 rng = np.random.default_rng(seed)
                 L = getattr(cfg, 'project_life', 20)
                 T = getattr(cfg, 'debt_tenor', 18)
@@ -933,7 +934,9 @@ elif page == "相關研究成果":
                 
                 yrs = np.arange(L)
                 clim = np.exp(rng.normal(-0.05 ** 2 / 2, 0.05, (n, L)))
-                typh = rng.random((n, L)) < 0.05
+                
+                # 這裡改用傳入的 typhoon_prob 動態計算颱風發生率
+                typh = rng.random((n, L)) < typhoon_prob
                 tloss = rng.uniform(0.02, 0.10, (n, L)) * typh
                 gen_factor = clim * (1 - tloss)
                 
@@ -1004,7 +1007,17 @@ elif page == "相關研究成果":
         admin_fee = 0.002 if "STO" in fin_mode else 0.0
         issue_fee = 0.02 if "STO" in fin_mode else 0.005
         
-        dev_sim_result = simulate_developer(CFG, n=2000, seed=2026+10, rate=current_rate, admin=admin_fee, issue_cost=issue_fee)
+        # 讓亂數種子與 typhoon_risk_slider 連動，確保滑桿一拉，亂數結果就會即時跟著變動
+        dynamic_seed = 2026 + typhoon_risk_slider * 10
+        dev_sim_result = simulate_developer(
+            CFG, 
+            n=2000, 
+            seed=dynamic_seed, 
+            rate=current_rate, 
+            typhoon_prob=typhoon_risk_slider / 100.0,  # 真正將滑桿數值傳進後台模型！
+            admin=admin_fee, 
+            issue_cost=issue_fee
+        )
         
         mean_dscr_path = dev_sim_result["dscr"].mean(axis=0)
         dscr_years_label = [f"第 {t+1} 年" for t in range(len(mean_dscr_path))]
@@ -1022,7 +1035,7 @@ elif page == "相關研究成果":
                              line=dict(color="#E53E3E", dash="dash", width=2))
         
         fig_energy.update_layout(
-            title=f"18年償債期平均償債覆蓋率 (DSCR) 走勢 — 模式：{fin_mode}",
+            title=f"18年償債期平均償債覆蓋率 (DSCR) 走勢 — 模式：{fin_mode} (颱風設定: {typhoon_risk_slider}%)",
             template="plotly_white", 
             height=350, 
             yaxis=dict(title="DSCR 均值 (安全門檻 1.10)")
@@ -1037,7 +1050,7 @@ elif page == "相關研究成果":
         <table class="styled-table">
             <tr>
                 <th>精算指標項目（對齊後台 2,000 次蒙地卡羅）</th>
-                <th>當前模擬數值表現</th>
+                <th>當前模擬數值表現 (颱風機率 {typhoon_risk_slider}%)</th>
                 <th>綠能資產安全邊際與合規判定</th>
             </tr>
             <tr>
