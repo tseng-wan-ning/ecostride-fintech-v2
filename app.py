@@ -811,16 +811,15 @@ elif page == "相關研究成果":
     years_axis = [f"第 {i} 年" for i in range(11)]
 
 # ==========================================
-    # 🌿 面向一：消費者端研究 (修復變數報錯與下拉選單聯動版)
+    # 🌿 面向一：消費者端研究 (修復門檻達成率計算版)
     # ==========================================
     with tab_res1:
         st.markdown("<h4 style='color:#2D4A22 !important; font-weight:800; margin-top:10px;'>消費者行為財富分化與普惠資產累積動態沙盤</h4>", unsafe_allow_html=True)
         st.markdown("<p style='font-size:13px; color:#555;'>依據同學提供的後台個體逐週模擬與族群模型引擎，動態檢視不同運動族群在 5 年參與期內的生產性綠色資產複利累積與普惠達成率：</p>", unsafe_allow_html=True)
         
-        # 宣告在地常數與顏色，徹底解決 PCOL NameError
         WPY_local = 52
         PROFILES_local = ["High", "Medium", "Low"]
-        PCOL_local = ["#2a78d6", "#eb6834", "#1baf7a"]  # 藍、橘、綠專屬色系
+        PCOL_local = ["#2a78d6", "#eb6834", "#1baf7a"]
         
         if 'central_draws' not in globals():
             def central_draws(cfg, S=1):
@@ -856,7 +855,7 @@ elif page == "相關研究成果":
                 wallet, cash = np.zeros(N), np.zeros(N)
                 cum_rew, yr_ach, blk = np.zeros(N), np.zeros(N), np.zeros(N)
                 snaps, cumr, rows = {}, {}, []
-                t5k = np.full(N, np.nan)
+                t5k = np.full(N, np.inf)  # 初始化為 inf
                 r_w = CFG.r_user / WPY_local
                 
                 for w in range(Wn):
@@ -892,15 +891,18 @@ elif page == "相關研究成果":
                     wallet = wallet * (1 + r_w * inforce) + pay
                     cum_rew += pay
                     yr_ach += hit
+                    
+                    # 追蹤記錄每位用戶首次達到 5,000 元的時間點（以年為單位）
+                    val_current = wallet + cash
+                    reached_5k = np.isinf(t5k) & (val_current >= 5_000)
+                    t5k[reached_5k] = t
+
                     if (w + 1) % WPY_local == 0:
                         rows.append(dict(year=y + 1, rewards=cum_rew.sum() - sum(r_["rewards"] for r_ in rows),
                                          achw=yr_ach.sum(), enrolled_end=alive.mean()))
                     yr_ach[:] = 0
                     snaps[y + 1], cumr[y + 1] = wallet + cash, cum_rew.copy()
                     
-                val = wallet + cash
-                n5 = np.isnan(t5k) & (val >= 5_000)
-                t5k[n5] = (w + 1) / WPY_local
                 return dict(prof=prof, p_i=p_i, value=snaps, cum_rew=cumr, t5k=t5k,
                             t_drop=t_drop, t_lapse=t_lapse, annual=pd.DataFrame(rows))
 
@@ -922,7 +924,6 @@ elif page == "相關研究成果":
         v_target = sim_results["value"][interactive_years]
         stay_mask = (sim_results["t_drop"] >= interactive_years) & (sim_results["t_lapse"] >= interactive_years)
         
-        # 根據下拉選單過濾族群索引
         if "High" in profile_view_mode:
             target_indices = [0]
             profile_label = "High 高活躍族群"
@@ -936,14 +937,17 @@ elif page == "相關研究成果":
             target_indices = [0, 1, 2]
             profile_label = "全體總覽"
 
-        # 計算選定族群的統計數據
         mask_profile = np.isin(sim_results["prof"], target_indices)
         mask_stay_profile = mask_profile & stay_mask
         
         avg_val_display = v_target[mask_profile].mean()
         stay_rate_display = mask_stay_profile.mean() * 100 if mask_profile.any() else 0
+        
+        # 計算達 5,000 元門檻的比例
+        t5k_vals = sim_results["t5k"][mask_profile]
+        pct_5k = (t5k_vals <= interactive_years).mean() * 100 if mask_profile.any() else 0
 
-        # 上方動態計量卡片（會隨著下拉選單即時變動數值！）
+        # 上方動態計量卡片
         col_c1, col_c2, col_c3 = st.columns(3)
         with col_c1:
             st.markdown(f"""
@@ -962,14 +966,14 @@ elif page == "相關研究成果":
         with col_c3:
             st.markdown(f"""
             <div class="metric-card" style="border-top: 4px solid #92BA80;">
-                <div class="metric-value-green">{(sim_results["t5k"][mask_profile] <= interactive_years).mean()*100:.1f}%</div>
+                <div class="metric-value-green">{pct_5k:.1f}%</div>
                 <div class="metric-label">{profile_label} 達投資門檻 ($5,000) 比例</div>
             </div>
             """, unsafe_allow_html=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
 
-        # 圖像化一：跨期資產成長軌跡圖 (會根據選擇的族群呈現對應軌跡)
+        # 圖像化一：跨期資產成長軌跡圖
         yrs_axis = list(range(1, CFG.years + 1))
         fig_asset = go.Figure()
         
@@ -996,7 +1000,7 @@ elif page == "相關研究成果":
         )
         st.plotly_chart(fig_asset, use_container_width=True)
 
-        # 圖像化二：各族群資產分布箱形圖 (使用 PCOL_local 陣列)
+        # 圖像化二：各族群資產分布箱形圖
         col_g1, col_g2 = st.columns([1.2, 1])
         with col_g1:
             fig_box = go.Figure()
