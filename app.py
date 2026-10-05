@@ -622,11 +622,11 @@ elif page == "提案動機與模式介紹":
         """, unsafe_allow_html=True)
 
 # ==========================================
-# 6. 分頁三：APP 介面展示 (增加變數安全防護版)
+# 6. 分頁三：APP 介面展示 (變數大小寫安全防護版)
 # ==========================================
 elif page == "APP 介面展示":
-    # 安全防護：若 R_STAR 尚未在後台被計算定義，先賦予預設值
     current_r_star = globals().get('R_STAR', 30.5)
+    wpy_val = globals().get('WPY', 52)  # 安全防護 WPY 常數
 
     st.markdown("<h2 style='color:#0C0E0B !important; font-size:32px; font-weight:800;'>📱 APP 核心介面互動模擬</h2>", unsafe_allow_html=True)
     st.markdown("<p style='font-size:14px; color:#0C0E0B; opacity:0.8; font-weight:500;'>請嘗試在左側控制台調整您的每日健走行為與持續性因子，右側虛擬手機與聯立資產面板將會即時同步跳動。</p>", unsafe_allow_html=True)
@@ -659,11 +659,11 @@ elif page == "APP 介面展示":
     ach_prob_est = min(0.95, max(0.05, (step_diff / CFG.goal_extra) * CFG.p_ach_gain[sel_g] * ui_cons))
     weekly_expected_reward = ach_prob_est * current_r_star
     
-    # 模擬 5 年期累積複利資產
-    r_w_weekly = CFG.r_user / WPY
+    # 模擬 5 年期累積複利資產（使用大寫 WPY）
+    r_w_weekly = CFG.r_user / wpy_val
     accumulated_rwa_val = 0.0
-    for w_i in range(5 * WPY):
-        w_pay = weekly_expected_reward if (w_i % WPY < 45) else weekly_expected_reward * 0.8
+    for w_i in range(5 * wpy_val):
+        w_pay = weekly_expected_reward if (w_i % wpy_val < 45) else weekly_expected_reward * 0.8
         accumulated_rwa_val = accumulated_rwa_val * (1 + r_w_weekly) + w_pay
 
     with col_ui_right:
