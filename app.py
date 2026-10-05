@@ -622,7 +622,7 @@ elif page == "提案動機與模式介紹":
         """, unsafe_allow_html=True)
 
 # ==========================================
-# 6. 分頁三：APP 介面展示 (手機字體放大優化版)
+# 6. 分頁三：APP 介面展示 (新增 AI 智能客服圖形版)
 # ==========================================
 elif page == "APP 介面展示":
     current_r_star = globals().get('R_STAR', 30.5)
@@ -727,21 +727,27 @@ elif page == "APP 介面展示":
         else:
             screen_content = f"""
                 <div style="font-size:11px; font-weight:800; color:#83A474; text-align:center; letter-spacing:1px; margin-bottom:8px;">🛡️ POLICY & RISK STATUS</div>
-                <div style="background:#F8F9FA; border:1px solid #E2E8F0; padding:12px 14px; border-radius:12px; text-align:left; margin-bottom:10px;">
+                <div style="background:#F8F9FA; border:1px solid #E2E8F0; padding:10px 12px; border-radius:12px; text-align:left; margin-bottom:8px;">
                     <span style="font-size:10px; color:#666; font-weight:600;">保單年度與風險合規</span>
-                    <div style="font-size:14px; font-weight:800; color:#2D4A22; margin-top:2px;">第 3 年度 (在籍有效・大盤損失率 74.2%)</div>
+                    <div style="font-size:13px; font-weight:800; color:#2D4A22; margin-top:1px;">第 3 年度 (在籍有效・大盤損失率 74.2%)</div>
                 </div>
                 
-                <div style="background:#F0F4EC; border:1px solid #B7CEAD; padding:12px; border-radius:12px; font-size:11px; color:#0C0E0B;">
+                <div style="background:#F0F4EC; border:1px solid #B7CEAD; padding:10px 12px; border-radius:12px; font-size:10px; color:#0C0E0B; margin-bottom:8px;">
                     <b>💡 回饋金智慧配置模式：</b><br>
-                    <div style="margin-top:6px; font-size:10px; color:#333; line-height:1.6;">
+                    <div style="margin-top:4px; font-size:9px; color:#333; line-height:1.5;">
                         ☑️ <b>滾入 RWA 綠能資產 (預設，享 3.5% 複利)</b><br>
                         ☐ 自動折抵次年保費 (省錢省心)<br>
                         ☐ 現金提領 (需滿 2 年歸屬期)
                     </div>
                 </div>
-                <div style="font-size:9px; color:#777; margin-top:10px; text-align:center; line-height:1.4;">
-                    未滿 2 年解約者帳戶回歸保險準備金，滿 2 年後全額歸屬用戶。
+
+                <!-- AI 智能客服小卡 -->
+                <div style="background:#EBF3EA; border:1px solid #83A474; padding:10px; border-radius:12px; display:flex; align-items:center; gap:8px;">
+                    <div style="font-size:22px;">🤖</div>
+                    <div style="font-size:9px; color:#2D4A22; line-height:1.4;">
+                        <b>EcoStride AI 智能精算助手</b><br>
+                        <span style="color:#444;">“偵測到您近期達標率高達 {ach_prob_est*100:.0f}%，已自動幫您最佳化 3.5% RWA 複利滾存！”</span>
+                    </div>
                 </div>
             """
 
