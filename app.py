@@ -778,7 +778,6 @@ elif page == "相關研究成果":
         st.markdown("<h4 style='color:#2D4A22 !important; font-weight:800; margin-top:10px;'>保險公司 J 型損益曲線與理賠損失率動態模擬</h4>", unsafe_allow_html=True)
         st.markdown("<p style='font-size:13px; color:#555;'>前 5 年由於初期投入期，累計缺口約達 −388 萬（J 型谷底落在第 3 年）；隨著健康外溢發酵，第 10 年 NPV 增加達 +345 萬。</p>", unsafe_allow_html=True)
         
-        # 互動滑桿：保險公司初期預算投放規模
         initial_budget_scale = st.slider("調整保險公司初期預算投放規模倍數", 0.5, 1.5, 1.0, 0.1)
         
         j_curve_npv = [-550*initial_budget_scale, -680*initial_budget_scale, -703*initial_budget_scale, -690*initial_budget_scale, -620*initial_budget_scale, -530, -420, -290, -140, 120, 345]
@@ -836,8 +835,8 @@ elif page == "相關研究成果":
                     'bar': {'color': "#83A474"},
                     'bgcolor': "white",
                     'borderwidth': 2,
-                    'bordercolor": "#B7CEAD",
-                    'steps': [{'range': [0, 50], 'color': "#FFF5F5"}, {'range': [50, 100], 'color': "#F5F7F4"}]
+                    'bordercolor': '#B7CEAD',
+                    'steps': [{'range': [0, 50], 'color': '#FFF5F5'}, {'range': [50, 100], 'color': '#F5F7F4'}]
                 }
             ))
             fig_gauge.update_layout(height=250, margin=dict(l=20, r=20, t=20, b=20))
