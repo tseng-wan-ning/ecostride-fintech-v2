@@ -820,7 +820,7 @@ elif page == "相關研究成果":
     # ==========================================
     with tab_res4:
         st.markdown("<h4 style='color:#2D4A22 !important; font-weight:800; margin-top:10px;'>生態系成功啟動之三方共贏機率與邊界條件 (v3 互動沙盤)</h4>", unsafe_allow_html=True)
-        st.markdown("<p style='font-size:13px; color:#555;'>依據同學 v3 核心模型，您可以<b>直接調整下方參數滑桿與氣候情境</b>。當共贏機率低於 50% 時，儀表板將自動顯示為嚴格的<b>紅色警戒</b>；高於 50% 則呈現<b>綠色高效運轉</b>：</p>", unsafe_allow_html=True)
+        st.markdown("<p style='font-size:13px; color:#555;'>您可以<b>直接調整下方參數滑桿與氣候情境</b>。當共贏機率低於 50% 時，儀表板將自動顯示為嚴格的<b>紅色警戒</b>；高於 50% 則呈現<b>綠色高效運轉</b>：</p>", unsafe_allow_html=True)
         
         # 🎯 注入氣候選單專屬綠色系醒目化 CSS
         st.markdown("""
