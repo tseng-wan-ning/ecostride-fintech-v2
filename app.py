@@ -823,7 +823,6 @@ elif page == "相關研究成果":
         st.markdown("<p style='font-size:13px; color:#555;'>結合行為金融、保險精算與綠能 STO 的聯立總成檢視（儀表板會根據您的左側參數設定即時重算與變色）：</p>", unsafe_allow_html=True)
         
         # 🎯 嚴格對齊 v3 邏輯：基於當前左側精算控制台參數動態計算三方共贏機率與保險 NPV 不輸機率
-        # 1. 計算共贏機率 (以 67.3% 為 v3 基準點，依據各參數敏感度即時浮動)
         dynamic_win_ratio = 67.3 + (param_r_star - 30.5) * -0.6 + (param_steps_inc - 0.20) * 30 + (param_consistency - 0.75) * 25
         if "極端降雨" in param_rain_shock:
             dynamic_win_ratio -= 12.0
@@ -831,23 +830,21 @@ elif page == "相關研究成果":
             dynamic_win_ratio += 4.5
         dynamic_win_ratio = max(5.0, min(99.8, dynamic_win_ratio))
 
-        # 2. 計算保險公司 10 年不輸現行方案機率 (v3 基準 67.0%)
         dynamic_ins_win = 67.0 + (param_steps_inc - 0.20) * 40 + (param_consistency - 0.75) * 15
-        if param_r_star > 40:  # 若每週回饋過高，保險公司初期負擔加重
+        if param_r_star > 40:
             dynamic_ins_win -= (param_r_star - 40) * 1.5
         dynamic_ins_win = max(10.0, min(99.0, dynamic_ins_win))
 
-        # 3. 決定儀表板指針顏色與警戒區間
         if dynamic_win_ratio >= 60.0:
-            gauge_bar_color = "#83A474"  # 綠能綠 (安全/共贏)
+            gauge_bar_color = "#83A474"
             gauge_bg_steps = [{'range': [0, 50], 'color': '#FFF5F5'}, {'range': [50, 100], 'color': '#F5F7F4'}]
             status_badge = "<span style='color: #83A474; font-weight: 800;'>🟢 飛輪高效運轉（三方共贏）</span>"
         elif dynamic_win_ratio >= 40.0:
-            gauge_bar_color = "#D69E2E"  # 警示黃 (中立邊界)
+            gauge_bar_color = "#D69E2E"
             gauge_bg_steps = [{'range': [0, 40], 'color': '#FFF5F5'}, {'range': [40, 100], 'color': '#FEFCBF'}]
             status_badge = "<span style='color: #D69E2E; font-weight: 800;'>🟡 處於損益平衡邊界，需調控參數</span>"
         else:
-            gauge_bar_color = "#E53E3E"  # 警戒紅 (補貼過高或誘發不足)
+            gauge_bar_color = "#E53E3E"
             gauge_bg_steps = [{'range': [0, 100], 'color': '#FFF5F5'}]
             status_badge = "<span style='color: #E53E3E; font-weight: 800;'>🔴 警示：補貼過高或行為誘發不足，面臨赤字風險</span>"
 
@@ -858,7 +855,7 @@ elif page == "相關研究成果":
                 mode = "gauge+number",
                 value = dynamic_win_ratio,
                 domain = {'x': [0, 1], 'y': [0, 1]},
-                number = {'suffix": "%", 'font': {'size': 32, 'color': gauge_bar_color}},
+                number = {'suffix': '%', 'font': {'size': 32, 'color': gauge_bar_color}},
                 gauge = {
                     'axis': {'range': [0, 100], 'tickwidth': 1, 'tickcolor': "#0C0E0B"},
                     'bar': {'color': gauge_bar_color, 'thickness': 0.75},
