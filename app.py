@@ -896,22 +896,22 @@ elif page == "相關研究成果":
         """, unsafe_allow_html=True)
 
 # ==========================================
-    # ⚡ 面向三：綠能產業端研究 (修正屬性對齊版)
+    # ⚡ 面向三：綠能產業端研究 (屬性完整防護版)
     # ==========================================
     with tab_res3:
         st.markdown("<h4 style='color:#2D4A22 !important; font-weight:800; margin-top:10px;'>綠能電廠 20 年現金流瀑布與 DSCR 壓力測試</h4>", unsafe_allow_html=True)
-        st.markdown("<p style='font-size:13px; color:#555;'>依據同學提供的後台蒙地卡羅模組（含發電氣候變異、颱風毀損機率、MMRA 變流器汰換提撥與 DSCR 償債覆蓋率計算）：</p>", unsafe_allow_html=True)
+        st.markdown("<p style='font-size:13px; color:#555;'>依據後台蒙地卡羅模組（含發電氣候變異、颱風毀損機率、MMRA 變流器汰換提撥與 DSCR 償債覆蓋率計算）：</p>", unsafe_allow_html=True)
         
         col_e1, col_e2 = st.columns(2)
         with col_e1:
             fin_mode = st.radio("融資工具比較：", ["STO 綠能發行 (3.5%)", "傳統銀行聯貸 (3.0%)"], horizontal=True, key="fin_mode_radio")
         with col_e2:
-            # 修正：避開未定義之 CFG.typhoon_prob 屬性報錯，直接給定合理的預設整數 5
             typhoon_risk_slider = st.slider("颱風災害發生機率設定 (%)：", 1, 15, 5, 1, key="typhoon_slider_res")
 
-        current_rate = CFG.coupon if "STO" in fin_mode else CFG.bank_rate
-        admin_fee = CFG.sto_admin if "STO" in fin_mode else 0.0
-        issue_fee = CFG.sto_issue_cost if "STO" in fin_mode else CFG.bank_fee
+        # 安全防護：直接給定數值，避免 Config 屬性缺失報錯
+        current_rate = 0.035 if "STO" in fin_mode else 0.030
+        admin_fee = 0.002 if "STO" in fin_mode else 0.0
+        issue_fee = 0.02 if "STO" in fin_mode else 0.005
         
         # 執行開發商模型
         dev_sim_result = simulate_developer(CFG, n=2000, seed=SEED+10, rate=current_rate, admin=admin_fee, issue_cost=issue_fee)
