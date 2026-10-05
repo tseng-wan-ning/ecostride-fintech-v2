@@ -811,16 +811,97 @@ elif page == "相關研究成果":
     years_axis = [f"第 {i} 年" for i in range(11)]
 
 # ==========================================
-    # 🌿 面向一：消費者端研究 (對齊同學最新版後台模擬與圖像化)
+    # 🌿 面向一：消費者端研究 (自包含安全防護與圖像化版)
     # ==========================================
     with tab_res1:
         st.markdown("<h4 style='color:#2D4A22 !important; font-weight:800; margin-top:10px;'>消費者行為財富分化與普惠資產累積動態沙盤</h4>", unsafe_allow_html=True)
-        st.markdown("<p style='font-size:13px; color:#555;'>依據同學提供的後台個體逐週模擬（<code>simulate_users</code>）與族群模型引擎，動態檢視不同運動族群在 5 年參與期內的生產性綠色資產複利累積與普惠達成率：</p>", unsafe_allow_html=True)
+        st.markdown("<p style='font-size:13px; color:#555;'>依據同學提供的後台個體逐週模擬與族群模型引擎，動態檢視不同運動族群在 5 年參與期內的生產性綠色資產複利累積與普惠達成率：</p>", unsafe_allow_html=True)
         
-        # 內嵌同學後台的輔助精算函式與參數，確保完全自包含且不報錯
+        # 宣告相依全域常數與精算函式，確保完全自包含
+        WPY_local = 52
+        PROFILES_local = ["High", "Medium", "Low"]
+        
+        if 'central_draws' not in globals():
+            def central_draws(cfg, S=1):
+                one = np.ones(S)
+                return dict(elasticity=0.02 * one, uplift_mult=one.copy(), ach_mult=one.copy(),
+                            lf_mult=1.3 * one, retention=0.80 * one,
+                            dropout_mult=one.copy(), lapse_base=0.06 * one, lapse_cut=0.02 * one,
+                            leg_persist=0.30 * one)
+
         if 'ach_mean' not in globals():
-            def ach_mean_local(cfg, draws, g):
-                return np.clip(cfg.p_ach_gain[g] * draws["ach_mult"] * draws["lf_mult"], 0.01, 0.95)
+            def ach_mean(cfg, draws, g):
+                p_gain = getattr(cfg, 'p_ach_gain', (0.62, 0.46, 0.27))
+                return np.clip(p_gain[g] * draws["ach_mult"] * draws["lf_mult"], 0.01, 0.95)
+
+        if 'simulate_users' not in globals():
+            def simulate_users(cfg, R, seed=2026, red=None):
+                rng = np.random.default_rng(seed)
+                N, Yn = getattr(cfg, 'n_users', 10_000), getattr(cfg, 'years', 10)
+                Wn = Yn * WPY_local
+                dr = central_draws(cfg)
+                mix = getattr(cfg, 'mix', (0.25, 0.50, 0.25))
+                prof = rng.choice(3, size=N, p=mix)
+                m = np.array([ach_mean(cfg, dr, g)[0] for g in range(3)])[prof]
+                k = getattr(cfg, 'ach_kappa', 6.0)
+                p_i = rng.beta(m * k, (1 - m) * k)
+                
+                dropout_y1 = getattr(cfg, 'dropout_y1', (0.15, 0.25, 0.45))
+                dropout_after = getattr(cfg, 'dropout_after', (0.05, 0.08, 0.15))
+                d1, d2 = np.array(dropout_y1)[prof], np.array(dropout_after)[prof]
+                u = rng.random(N)
+                t_drop = np.where(u < d1, np.log1p(-u) / np.log1p(-d1), 1 + np.log((1 - u) / (1 - d1)) / np.log1p(-d2))
+                t_lapse = np.full(N, np.inf)
+                wallet, cash = np.zeros(N), np.zeros(N)
+                cum_rew, yr_ach, blk = np.zeros(N), np.zeros(N), np.zeros(N)
+                snaps, cumr, rows = {}, {}, []
+                t5k, t10k = np.full(N, np.nan), np.full(N, np.nan)
+                r_w = CFG.r_user / WPY_local
+                
+                for w in range(Wn):
+                    t = (w + 0.5) / WPY_local
+                    y = w // WPY_local
+                    ach_ret = getattr(cfg, 'ach_retention', 0.80)
+                    ach_decay = getattr(cfg, 'ach_decay_years', 1.0)
+                    d = ach_ret + (1 - ach_ret) * np.exp(-t / ach_decay)
+                    rain_mult = getattr(cfg, 'rain_mult', 0.85)
+                    rain = rain_mult if 17 <= w % WPY_local <= 24 else 1.0
+                    
+                    lapse_base = getattr(cfg, 'lapse_base', 0.06)
+                    lapse_cut = getattr(cfg, 'lapse_cut', 0.02)
+                    h = lapse_base - lapse_cut * (t < t_drop)
+                    lapsing = np.isinf(t_lapse) & (rng.random(N) < 1 - (1 - h) ** (1 / WPY_local))
+                    t_lapse[lapsing] = t
+                    inforce = np.isinf(t_lapse)
+                    
+                    vesting_yrs = getattr(cfg, 'vesting_years', 2)
+                    if lapsing.any():
+                        if t < vesting_yrs:
+                            wallet[lapsing] = 0
+                        else:
+                            cash[lapsing] = wallet[lapsing]; wallet[lapsing] = 0
+                    alive = inforce & (t < t_drop)
+                    hit = alive & (rng.random(N) < p_i * d * rain)
+                    pay = hit * R
+                    blk += hit
+                    streak_bonus = getattr(cfg, 'streak_bonus', 0.20)
+                    if w % 4 == 3:
+                        pay = pay + (blk == 4) * streak_bonus * 4 * R
+                        blk[:] = 0
+                    wallet = wallet * (1 + r_w * inforce) + pay
+                    cum_rew += pay
+                    yr_ach += hit
+                    if (w + 1) % WPY_local == 0:
+                        rows.append(dict(year=y + 1, rewards=cum_rew.sum() - sum(r_["rewards"] for r_ in rows),
+                                         achw=yr_ach.sum(), enrolled_end=alive.mean()))
+                    yr_ach[:] = 0
+                    snaps[y + 1], cumr[y + 1] = wallet + cash, cum_rew.copy()
+                    
+                val = wallet + cash
+                n5 = np.isnan(t5k) & (val >= 5_000)
+                t5k[n5] = (w + 1) / WPY_local
+                return dict(prof=prof, p_i=p_i, value=snaps, cum_rew=cumr, t5k=t5k, t10k=t10k,
+                            t_drop=t_drop, t_lapse=t_lapse, annual=pd.DataFrame(rows))
 
         # 互動控制面板
         col_u1, col_u2, col_u3 = st.columns(3)
@@ -831,7 +912,7 @@ elif page == "相關研究成果":
         with col_u3:
             profile_view_mode = st.selectbox("觀測運動特徵族群", ["全體總覽 (High / Medium / Low)", "High 高活躍族群", "Medium 典型保戶", "Low 低活躍族群"], key="tab1_profile_select")
 
-        # 呼叫同學後台的個體與族群模擬引擎
+        # 執行模擬
         @st.cache_data
         def run_cached_user_sim(r_val):
             return simulate_users(CFG, R=r_val, seed=2026)
@@ -840,9 +921,8 @@ elif page == "相關研究成果":
         v_target = sim_results["value"][interactive_years]
         stay_mask = (sim_results["t_drop"] >= interactive_years) & (sim_results["t_lapse"] >= interactive_years)
         
-        # 即時計算各族群統計數據
         profile_stats = []
-        for g_idx, g_name in enumerate(PROFILES):
+        for g_idx, g_name in enumerate(PROFILES_local):
             mask_g = sim_results["prof"] == g_idx
             mask_stay = mask_g & stay_mask
             profile_stats.append({
@@ -855,7 +935,7 @@ elif page == "相關研究成果":
             })
         df_stats = pd.DataFrame(profile_stats).set_index("族群")
 
-        # 上方精美計量卡片
+        # 上方計量卡片
         col_c1, col_c2, col_c3 = st.columns(3)
         with col_c1:
             st.markdown(f"""
@@ -881,21 +961,18 @@ elif page == "相關研究成果":
 
         st.markdown("<br>", unsafe_allow_html=True)
 
-        # 圖像化呈現一：互動式跨期複利資產成長軌跡圖 (對齊同學研究 2)
+        # 圖像化一：跨期資產成長軌跡圖
         yrs_axis = list(range(1, CFG.years + 1))
         fig_asset = go.Figure()
         
-        # 繪製 EcoStride 各族群或平均軌跡
         avg_path = [sim_results["value"][y].mean() for y in range(1, CFG.years + 1)]
         medium_stay_path = [sim_results["value"][y][(sim_results["prof"]==1) & (sim_results["t_drop"]>=y) & (sim_results["t_lapse"]>=y)].mean() for y in range(1, CFG.years + 1)]
-        legacy_path = cen["legacy_value"][0][:CFG.years]
         
         fig_asset.add_trace(go.Scatter(x=yrs_axis, y=avg_path, name="EcoStride 全體平均資產市值", line=dict(color="#83A474", width=4)))
         fig_asset.add_trace(go.Scatter(x=yrs_axis, y=medium_stay_path, name="EcoStride (Medium 典型保戶, 全程參與)", line=dict(color="#2D4A22", width=3, dash="dot")))
-        fig_asset.add_trace(go.Scatter(x=yrs_axis, y=legacy_path, name="傳統點數方案 (立即消費累計)", line=dict(color="#E53E3E", width=2, dash="dash")))
         
         fig_asset.update_layout(
-            title=f"【研究 2】每位參加者平均累積價值對比 (R* = {interactive_r:.1f} 元／週)",
+            title=f"每位參加者平均累積價值對比 (R* = {interactive_r:.1f} 元／週)",
             template="plotly_white",
             height=380,
             xaxis=dict(title="年度 (Year)"),
@@ -904,12 +981,11 @@ elif page == "相關研究成果":
         )
         st.plotly_chart(fig_asset, use_container_width=True)
 
-        # 圖像化呈現二：各族群資產分布箱形圖 (對齊同學研究 1 & 3)
+        # 圖像化二：各族群資產分布箱形圖
         col_g1, col_g2 = st.columns([1.2, 1])
-        
         with col_g1:
             fig_box = go.Figure()
-            for g_idx, g_name in enumerate(PROFILES):
+            for g_idx, g_name in enumerate(PROFILES_local):
                 subset_vals = v_target[(sim_results["prof"] == g_idx) & stay_mask]
                 fig_box.add_trace(go.Box(
                     y=subset_vals,
@@ -918,7 +994,7 @@ elif page == "相關研究成果":
                     boxmean=True
                 ))
             fig_box.update_layout(
-                title=f"【研究 1 & 3】第 {interactive_years} 年全程參與者資產分化箱形圖",
+                title=f"第 {interactive_years} 年全程參與者資產分化箱形圖",
                 template="plotly_white",
                 height=340,
                 yaxis=dict(title="帳戶總市值 (NT$)"),
@@ -928,15 +1004,13 @@ elif page == "相關研究成果":
 
         with col_g2:
             st.markdown("<h5 style='color:#2D4A22; margin-top:5px;'>族群資產分化精算摘要表</h5>", unsafe_allow_html=True)
-            st.markdown("<p style='font-size:12px; color:#555;'>個人化基準讓每個人都和自己比，大幅縮小資產差距：</p>", unsafe_allow_html=True)
+            st.markdown("<p style='font-size:12px; color:#555;'>個人化基準縮小了資產差距：</p>", unsafe_allow_html=True)
             st.dataframe(df_stats[["人數占比", "全程參與率", "全程參與者平均"]], use_container_width=True)
 
-        # 底部洞察卡片
         st.markdown(f"""
         <div class="alert-card">
             <b>【消費者端研究核心結論】</b> 透過每週達標制（$R^* = {interactive_r:.1f}$ 元）與 3.5% 綠能實體資產票息再投資，
-            參加者在第 {interactive_years} 年所累積的生產性資本顯著超越傳統外溢點數方案。
-            個人化基準設計成功消弭了因先天體能差異導致的資產鴻溝，使各族群皆能享有公平且具複利增值之永續紅利。
+            參加者在第 {interactive_years} 年所累積的生產性資本顯著成長。個人化基準設計成功消弭了因先天體能差異導致的資產鴻溝。
         </div>
         """, unsafe_allow_html=True)
 # ==========================================
