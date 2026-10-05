@@ -811,11 +811,11 @@ elif page == "相關研究成果":
     years_axis = [f"第 {i} 年" for i in range(11)]
 
 # ==========================================
-    # 🌿 面向一：消費者端研究 (修復門檻達成率計算版)
+    # 🌿 面向一：消費者端研究 (精簡語氣版本)
     # ==========================================
     with tab_res1:
         st.markdown("<h4 style='color:#2D4A22 !important; font-weight:800; margin-top:10px;'>消費者行為財富分化與普惠資產累積動態沙盤</h4>", unsafe_allow_html=True)
-        st.markdown("<p style='font-size:13px; color:#555;'>依據同學提供的後台個體逐週模擬與族群模型引擎，動態檢視不同運動族群在 5 年參與期內的生產性綠色資產複利累積與普惠達成率：</p>", unsafe_allow_html=True)
+        st.markdown("<p style='font-size:13px; color:#555;'>動態檢視不同運動族群在 5 年參與期內的生產性綠色資產複利累積與普惠達成率：</p>", unsafe_allow_html=True)
         
         WPY_local = 52
         PROFILES_local = ["High", "Medium", "Low"]
@@ -855,7 +855,7 @@ elif page == "相關研究成果":
                 wallet, cash = np.zeros(N), np.zeros(N)
                 cum_rew, yr_ach, blk = np.zeros(N), np.zeros(N), np.zeros(N)
                 snaps, cumr, rows = {}, {}, []
-                t5k = np.full(N, np.inf)  # 初始化為 inf
+                t5k = np.full(N, np.inf)
                 r_w = CFG.r_user / WPY_local
                 
                 for w in range(Wn):
@@ -892,7 +892,6 @@ elif page == "相關研究成果":
                     cum_rew += pay
                     yr_ach += hit
                     
-                    # 追蹤記錄每位用戶首次達到 5,000 元的時間點（以年為單位）
                     val_current = wallet + cash
                     reached_5k = np.isinf(t5k) & (val_current >= 5_000)
                     t5k[reached_5k] = t
@@ -943,7 +942,6 @@ elif page == "相關研究成果":
         avg_val_display = v_target[mask_profile].mean()
         stay_rate_display = mask_stay_profile.mean() * 100 if mask_profile.any() else 0
         
-        # 計算達 5,000 元門檻的比例
         t5k_vals = sim_results["t5k"][mask_profile]
         pct_5k = (t5k_vals <= interactive_years).mean() * 100 if mask_profile.any() else 0
 
