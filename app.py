@@ -816,11 +816,11 @@ elif page == "相關研究成果":
         st.plotly_chart(fig_energy, use_container_width=True)
 
 # ==========================================
-    # 🔄 面向四：整體循環模式 (全自主互動動態儀表板沙盤)
+    # 🔄 面向四：整體循環模式 (嚴格 < 50% 紅色警戒互動沙盤)
     # ==========================================
     with tab_res4:
         st.markdown("<h4 style='color:#2D4A22 !important; font-weight:800; margin-top:10px;'>生態系成功啟動之三方共贏機率與邊界條件 (v3 互動沙盤)</h4>", unsafe_allow_html=True)
-        st.markdown("<p style='font-size:13px; color:#555;'>在這裡您可以<b>直接調整下方滑桿與情境</b>，圓形儀表板與進度條將會隨您的數字變動即時重算、變色並更新共贏勝率：</p>", unsafe_allow_html=True)
+        st.markdown("<p style='font-size:13px; color:#555;'>在這裡您可以<b>直接調整下方滑桿與情境</b>，圓形儀表板與進度條將會隨您的數字變動即時重算、變色並更新共贏勝率（低於 50% 自動切換為紅色警戒）：</p>", unsafe_allow_html=True)
         
         # 🎯 在面向四內部建立獨立的互動調整控制項，讓用戶可直接自主拖曳
         st.markdown("<div style='background-color:#FFFFFF; border:1px solid #B7CEAD; padding:20px; border-radius:12px; margin-bottom:20px;'>", unsafe_allow_html=True)
@@ -848,19 +848,15 @@ elif page == "相關研究成果":
             dynamic_ins_win -= (tab4_r_star - 40) * 2.0
         dynamic_ins_win = max(10.0, min(99.0, dynamic_ins_win))
 
-        # 🎯 動態變色與狀態判定邏輯
-        if dynamic_win_ratio >= 60.0:
+        # 🎯 嚴格判定：大於等於 50% 顯示綠色，低於 50% 絕對強制顯示紅色
+        if dynamic_win_ratio >= 50.0:
             gauge_bar_color = "#83A474"  # 綠色 (共贏)
             gauge_bg_steps = [{'range': [0, 50], 'color': '#FFF5F5'}, {'range': [50, 100], 'color': '#F5F7F4'}]
             status_badge = "<span style='color: #83A474; font-weight: 800;'>🟢 飛輪高效運轉（三方共贏達標）</span>"
-        elif dynamic_win_ratio >= 40.0:
-            gauge_bar_color = "#D69E2E"  # 黃色 (平衡邊界)
-            gauge_bg_steps = [{'range': [0, 40], 'color': '#FFF5F5'}, {'range': [40, 100], 'color': '#FEFCBF'}]
-            status_badge = "<span style='color: #D69E2E; font-weight: 800;'>🟡 處於損益平衡邊界，建議優化回饋參數</span>"
         else:
-            gauge_bar_color = "#E53E3E"  # 紅色 (警戒赤字)
+            gauge_bar_color = "#E53E3E"  # 紅色 (警戒赤字 / 低於50%)
             gauge_bg_steps = [{'range': [0, 100], 'color': '#FFF5F5'}]
-            status_badge = "<span style='color: #E53E3E; font-weight: 800;'>🔴 警示：回饋金過高或保戶誘發不足，面臨財務缺口</span>"
+            status_badge = "<span style='color: #E53E3E; font-weight: 800;'>🔴 警示：共贏勝率低於 50%，面臨赤字與不可行風險</span>"
 
         col_res_viz, col_res_text = st.columns([1, 1.5])
         
@@ -909,7 +905,7 @@ elif page == "相關研究成果":
         
         st.markdown("""
         <div style="font-size: 13.5px; line-height: 1.7; color: #0C0E0B; margin-top: 20px; background-color: #FFFFFF; padding: 16px; border-radius: 10px; border: 1px solid #B7CEAD;">
-            <b>💡 互動沙盤機制說明：</b> 透過上方專屬滑桿的即時調整，您可以清楚觀察當 $R^*$ 回饋金額過高或遇上極端降雨氣候時，儀表板會立即轉為紅色警戒並反映出共贏機率的下降；當調整回最佳化區間時則會恢復綠色高效運轉，完美符合同學 v3 研究報告中的計量敏感度分析。
+            <b>💡 互動沙盤機制說明：</b> 透過上方專屬滑桿的即時調整，當共贏勝率高於或等於 50% 時儀表板呈現綠色高效運轉；若因參數設定不當導致勝率<b>低於 50%</b>，則會立即切換為<b>紅色警戒</b>並示警，完美呈現計量經濟學中的決策邊界與檢定防線。
         </div>
         """, unsafe_allow_html=True)
 # ==========================================
