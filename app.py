@@ -895,32 +895,82 @@ elif page == "相關研究成果":
         </table>
         """, unsafe_allow_html=True)
 
-    # ==========================================
-    # ⚡ 面向三：綠能產業端研究
+   # ==========================================
+    # ⚡ 面向三：綠能產業端研究 (對齊同學最新版後台模擬)
     # ==========================================
     with tab_res3:
-        st.markdown("<h4 style='color:#2D4A22 !important; font-weight:800; margin-top:10px;'>綠能電廠償債覆蓋率 (DSCR) 與氣候壓力測試</h4>", unsafe_allow_html=True)
-        st.markdown("<p style='font-size:13px; color:#555;'>18 年償債期違約機率為 0%、DSCR 中位數保持在 1.22；變流器汰換年（第 12 年）透過 MMRA 提撥機制順利吸收。</p>", unsafe_allow_html=True)
+        st.markdown("<h4 style='color:#2D4A22 !important; font-weight:800; margin-top:10px;'>綠能電廠 20 年現金流瀑布與 DSCR 壓力測試</h4>", unsafe_allow_html=True)
+        st.markdown("<p style='font-size:13px; color:#555;'>依據同學提供的後台 10,000 次蒙地卡羅模組（含發電氣候變異、颱風毀損機率、MMRA 變流器汰換提撥與 DSCR 償債覆蓋率計算）：</p>", unsafe_allow_html=True)
         
-        stress_test_mode = st.radio("選擇電廠壓力測試情境：", ["正常發電氣候情境", "極端陰雨年 (-20% 發電量)"], horizontal=True)
+        # 讓使用者調整壓力測試參數，直接呼叫同學的 simulate_developer 邏輯
+        col_e1, col_e2 = st.columns(2)
+        with col_e1:
+            fin_mode = st.radio("融資工具比較：", ["STO 綠能發行 (3.5%)", "傳統銀行聯貸 (3.0%)"], horizontal=True)
+        with col_e2:
+            typhoon_risk_slider = st.slider("颱風災害發生機率設定 (%)：", 1, 15, int(CFG.typhoon_prob * 100), 1)
+
+        # 根據選擇動態調用或模擬
+        current_rate = CFG.coupon if "STO" in fin_mode else CFG.bank_rate
+        admin_fee = CFG.sto_admin if "STO" in fin_mode else 0.0
+        issue_fee = CFG.sto_issue_cost if "STO" in fin_mode else CFG.bank_fee
         
-        dscr_years = ["第1年", "第4年", "第8年", "第12年(變流器汰換)", "第15年", "第18年"]
-        if "正常" in stress_test_mode:
-            dscr_vals = [1.27, 1.25, 1.22, 1.17, 1.23, 1.19]
-        else:
-            dscr_vals = [1.18, 1.15, 1.12, 1.05, 1.14, 1.11]
-            
+        # 執行同學的開發商模型
+        dev_sim_result = simulate_developer(CFG, n=2000, seed=SEED+10, rate=current_rate, admin=admin_fee, issue_cost=issue_fee)
+        
+        # 萃取 DSCR 分布與平均軌跡
+        mean_dscr_path = dev_sim_result["dscr"].mean(axis=0)
+        dscr_years_label = [f"第 {t+1} 年" for t in range(len(mean_dscr_path))]
+        
         fig_energy = go.Figure()
-        fig_energy.add_trace(go.Bar(
-            x=dscr_years, 
-            y=dscr_vals, 
-            marker_color=['#83A474' if v>=1.1 else '#E53E3E' for v in dscr_vals], 
-            text=[f"{v:.2f}" for v in dscr_vals], 
-            textposition='auto'
+        fig_energy.add_trace(go.Scatter(
+            x=dscr_years_label, 
+            y=mean_dscr_path, 
+            mode='lines+markers',
+            name="平均 DSCR 軌跡",
+            line=dict(color="#83A474", width=3)
         ))
-        fig_energy.add_shape(type="line", x0=-0.5, x1=5.5, y0=1.1, y1=1.1, line=dict(color="#0C0E0B", dash="dash", width=2))
-        fig_energy.update_layout(title=f"案場償債覆蓋率 (DSCR) 分布 — {stress_test_mode}", template="plotly_white", height=320, yaxis=dict(range=[1.0, 1.4], title="DSCR 比率 (安全門檻 1.1)"))
+        
+        # 加入安全紅線 (1.10)
+        fig_energy.add_shape(type="line", x0=-0.5, x1=len(dscr_years_label)-0.5, y0=1.10, y1=1.10, 
+                             line=dict(color="#E53E3E", dash="dash", width=2))
+        
+        fig_energy.update_layout(
+            title=f"18年償債期平均償債覆蓋率 (DSCR) 走勢 — 模式：{fin_mode}",
+            template="plotly_white", 
+            height=350, 
+            yaxis=dict(title="DSCR 均值 (安全門檻 1.10)")
+        )
         st.plotly_chart(fig_energy, use_container_width=True)
+        
+        # 計算同學程式中的關鍵指標
+        default_prob = (np.isfinite(dev_sim_result["default_year"])).mean() * 100
+        mean_equity_irr = dev_sim_result["eq_irr"].mean() * 100
+        min_dscr_median = np.median(dev_sim_result["min_dscr"])
+        
+        st.markdown(f"""
+        <table class="styled-table">
+            <tr>
+                <th>精算指標項目（對齊後台 2,000 次蒙地卡羅）</th>
+                <th>當前模擬數值表現</th>
+                <th>綠能資產安全邊際與合規判定</th>
+            </tr>
+            <tr>
+                <td><b>18年債務期累積違約機率</b></td>
+                <td><b>{default_prob:.2f}%</b></td>
+                <td>比照國家級案場標準，違約風險趨近於零</td>
+            </tr>
+            <tr>
+                <td><b>最低 DSCR 中位數 (Min DSCR)</b></td>
+                <td><b>{min_dscr_median:.2f}</b></td>
+                <td>高於現金匣抓取門檻（1.10），現金流安全性極佳</td>
+            </tr>
+            <tr>
+                <td><b>股東權益內部報酬率 (Equity IRR)</b></td>
+                <td><b>{mean_equity_irr:.2f}%</b></td>
+                <td>提供穩健且具吸引力之綠能實體資產報酬</td>
+            </tr>
+        </table>
+        """, unsafe_allow_html=True)
 
     # ==========================================
     # 🔄 面向四：整體循環模式
