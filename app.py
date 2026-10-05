@@ -895,29 +895,27 @@ elif page == "相關研究成果":
         </table>
         """, unsafe_allow_html=True)
 
-   # ==========================================
-    # ⚡ 面向三：綠能產業端研究 (對齊同學最新版後台模擬)
+# ==========================================
+    # ⚡ 面向三：綠能產業端研究 (修正屬性對齊版)
     # ==========================================
     with tab_res3:
         st.markdown("<h4 style='color:#2D4A22 !important; font-weight:800; margin-top:10px;'>綠能電廠 20 年現金流瀑布與 DSCR 壓力測試</h4>", unsafe_allow_html=True)
-        st.markdown("<p style='font-size:13px; color:#555;'>依據同學提供的後台 10,000 次蒙地卡羅模組（含發電氣候變異、颱風毀損機率、MMRA 變流器汰換提撥與 DSCR 償債覆蓋率計算）：</p>", unsafe_allow_html=True)
+        st.markdown("<p style='font-size:13px; color:#555;'>依據同學提供的後台蒙地卡羅模組（含發電氣候變異、颱風毀損機率、MMRA 變流器汰換提撥與 DSCR 償債覆蓋率計算）：</p>", unsafe_allow_html=True)
         
-        # 讓使用者調整壓力測試參數，直接呼叫同學的 simulate_developer 邏輯
         col_e1, col_e2 = st.columns(2)
         with col_e1:
-            fin_mode = st.radio("融資工具比較：", ["STO 綠能發行 (3.5%)", "傳統銀行聯貸 (3.0%)"], horizontal=True)
+            fin_mode = st.radio("融資工具比較：", ["STO 綠能發行 (3.5%)", "傳統銀行聯貸 (3.0%)"], horizontal=True, key="fin_mode_radio")
         with col_e2:
-            typhoon_risk_slider = st.slider("颱風災害發生機率設定 (%)：", 1, 15, int(CFG.typhoon_prob * 100), 1)
+            # 修正：避開未定義之 CFG.typhoon_prob 屬性報錯，直接給定合理的預設整數 5
+            typhoon_risk_slider = st.slider("颱風災害發生機率設定 (%)：", 1, 15, 5, 1, key="typhoon_slider_res")
 
-        # 根據選擇動態調用或模擬
         current_rate = CFG.coupon if "STO" in fin_mode else CFG.bank_rate
         admin_fee = CFG.sto_admin if "STO" in fin_mode else 0.0
         issue_fee = CFG.sto_issue_cost if "STO" in fin_mode else CFG.bank_fee
         
-        # 執行同學的開發商模型
+        # 執行開發商模型
         dev_sim_result = simulate_developer(CFG, n=2000, seed=SEED+10, rate=current_rate, admin=admin_fee, issue_cost=issue_fee)
         
-        # 萃取 DSCR 分布與平均軌跡
         mean_dscr_path = dev_sim_result["dscr"].mean(axis=0)
         dscr_years_label = [f"第 {t+1} 年" for t in range(len(mean_dscr_path))]
         
@@ -930,7 +928,6 @@ elif page == "相關研究成果":
             line=dict(color="#83A474", width=3)
         ))
         
-        # 加入安全紅線 (1.10)
         fig_energy.add_shape(type="line", x0=-0.5, x1=len(dscr_years_label)-0.5, y0=1.10, y1=1.10, 
                              line=dict(color="#E53E3E", dash="dash", width=2))
         
@@ -942,7 +939,6 @@ elif page == "相關研究成果":
         )
         st.plotly_chart(fig_energy, use_container_width=True)
         
-        # 計算同學程式中的關鍵指標
         default_prob = (np.isfinite(dev_sim_result["default_year"])).mean() * 100
         mean_equity_irr = dev_sim_result["eq_irr"].mean() * 100
         min_dscr_median = np.median(dev_sim_result["min_dscr"])
