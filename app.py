@@ -816,29 +816,29 @@ elif page == "相關研究成果":
         st.plotly_chart(fig_energy, use_container_width=True)
 
 # ==========================================
-    # 🔄 面向四：整體循環模式 (嚴格 < 50% 紅色警戒互動沙盤)
+    # 🔄 面向四：整體循環模式 (嚴格對齊同學 v3 程式與紅綠二分法)
     # ==========================================
     with tab_res4:
         st.markdown("<h4 style='color:#2D4A22 !important; font-weight:800; margin-top:10px;'>生態系成功啟動之三方共贏機率與邊界條件 (v3 互動沙盤)</h4>", unsafe_allow_html=True)
-        st.markdown("<p style='font-size:13px; color:#555;'>在這裡您可以<b>直接調整下方滑桿與情境</b>，圓形儀表板與進度條將會隨您的數字變動即時重算、變色並更新共贏勝率（低於 50% 自動切換為紅色警戒）：</p>", unsafe_allow_html=True)
+        st.markdown("<p style='font-size:13px; color:#555;'>依據同學 v3 核心模型，您可以<b>直接調整下方參數滑桿</b>。當共贏機率低於 50% 時，儀表板將自動顯示為嚴格的<b>紅色警戒</b>；高於 50% 則呈現<b>綠色高效運轉</b>：</p>", unsafe_allow_html=True)
         
-        # 🎯 在面向四內部建立獨立的互動調整控制項，讓用戶可直接自主拖曳
+        # 🎯 面向四專屬參數調整控制台（嚴格對齊同學 v3 變數）
         st.markdown("<div style='background-color:#FFFFFF; border:1px solid #B7CEAD; padding:20px; border-radius:12px; margin-bottom:20px;'>", unsafe_allow_html=True)
-        st.markdown("<b style='color:#2D4A22; font-size:15px;'>🎛️ 面向四專屬參數調整控制台</b>", unsafe_allow_html=True)
+        st.markdown("<b style='color:#2D4A22; font-size:15px;'>🎛️ v3 聯立動態沙盤參數控制台</b>", unsafe_allow_html=True)
         
         col_c1, col_c2 = st.columns(2)
         with col_c1:
-            tab4_r_star = st.slider("每週預算中立回饋 R* (元/達標週)", 20.0, 50.0, 30.5, 1.0, key="t4_r")
-            tab4_steps_inc = st.slider("保戶平均健走提升率", 0.05, 0.50, 0.20, 0.05, key="t4_s")
+            tab4_r_star = st.slider("每週預算中立回饋 R* (元/達標週)", 20.0, 50.0, R_STAR_DEFAULT, 1.0, key="t4_r_v3")
+            tab4_steps_inc = st.slider("保戶平均健走提升率", 0.05, 0.50, 0.20, 0.05, key="t4_s_v3")
         with col_c2:
-            tab4_consistency = st.slider("全域行為穩定度因子", 0.30, 1.00, 0.75, 0.05, key="t4_c")
-            tab4_rain_shock = st.selectbox("季節氣候衝擊情境", ["梅雨/高日照自然波動 (標準)", "極端降雨氣候衝擊 (-35% 發電)", "晴雨交替穩定情境"], key="t4_rain")
+            tab4_consistency = st.slider("全域行為穩定度因子", 0.30, 1.00, 0.75, 0.05, key="t4_c_v3")
+            tab4_rain_shock = st.selectbox("季節氣候衝擊情境", ["梅雨/高日照自然波動 (標準 v3)", "極端降雨氣候衝擊 (-35% 發電)", "晴雨交替穩定情境"], key="t4_rain_v3")
         st.markdown("</div>", unsafe_allow_html=True)
 
-        # 🎯 嚴格對齊 v3 邏輯：根據面向四內部的自主參數即時計算動態共贏率
+        # 🎯 完全對齊同學 v3 的動態聯立計算公式
         dynamic_win_ratio = 67.3 + (tab4_r_star - 30.5) * -0.8 + (tab4_steps_inc - 0.20) * 35 + (tab4_consistency - 0.75) * 25
         if "極端降雨" in tab4_rain_shock:
-            dynamic_win_ratio -= 14.0
+            dynamic_win_ratio -= 15.0
         elif "晴雨交替" in tab4_rain_shock:
             dynamic_win_ratio += 5.0
         dynamic_win_ratio = max(5.0, min(99.8, dynamic_win_ratio))
@@ -848,15 +848,15 @@ elif page == "相關研究成果":
             dynamic_ins_win -= (tab4_r_star - 40) * 2.0
         dynamic_ins_win = max(10.0, min(99.0, dynamic_ins_win))
 
-        # 🎯 嚴格判定：大於等於 50% 顯示綠色，低於 50% 絕對強制顯示紅色
+        # 🎯 嚴格紅綠二分法邏輯：低於 50% 絕對顯示為紅色，高於等於 50% 顯示為綠色
         if dynamic_win_ratio >= 50.0:
-            gauge_bar_color = "#83A474"  # 綠色 (共贏)
+            gauge_bar_color = "#83A474"  # 綠色 (共贏安全區間)
             gauge_bg_steps = [{'range': [0, 50], 'color': '#FFF5F5'}, {'range': [50, 100], 'color': '#F5F7F4'}]
             status_badge = "<span style='color: #83A474; font-weight: 800;'>🟢 飛輪高效運轉（三方共贏達標）</span>"
         else:
-            gauge_bar_color = "#E53E3E"  # 紅色 (警戒赤字 / 低於50%)
+            gauge_bar_color = "#E53E3E"  # 紅色 (低於 50% 嚴格警戒區)
             gauge_bg_steps = [{'range': [0, 100], 'color': '#FFF5F5'}]
-            status_badge = "<span style='color: #E53E3E; font-weight: 800;'>🔴 警示：共贏勝率低於 50%，面臨赤字與不可行風險</span>"
+            status_badge = "<span style='color: #E53E3E; font-weight: 800;'>🔴 警示：共贏機率低於 50% 邊界，面臨財務赤字風險</span>"
 
         col_res_viz, col_res_text = st.columns([1, 1.5])
         
@@ -888,9 +888,9 @@ elif page == "相關研究成果":
             <div style='background-color:#FFFFFF; border:1px solid #B7CEAD; padding:22px; border-radius:12px; box-shadow: 0 4px 12px rgba(0,0,0,0.01);'>
                 <b style='font-size:16px; color:#2D4A22;'>v3 動態聯立沙盤即時清算解讀</b><br>
                 <div style="margin-top:12px; line-height: 1.8; font-size: 14px;">
-                    • 當前預算中立回饋: <b>R* = {tab4_r_star} 元/週</b><br>
-                    • 當前保戶步數成長率: <b>{tab4_steps_inc*100:.0f}%</b><br>
-                    • 當前行為持續性因子: <b>{tab4_consistency}</b><br>
+                    • 每週預算中立回饋: <b>R* = {tab4_r_star} 元/週</b><br>
+                    • 保戶平均步數成長率: <b>{tab4_steps_inc*100:.0f}%</b><br>
+                    • 行為持續性因子: <b>{tab4_consistency}</b><br>
                     • 氣候季節模擬情境: <b>{tab4_rain_shock}</b><br>
                     <hr style="margin: 10px 0; border-top: 1px solid #E2E8F0;">
                     ➔ <b>動態總體共贏勝率：<span style="color: {gauge_bar_color}; font-size: 24px; font-weight: 900;">{dynamic_win_ratio:.1f}%</span></b><br>
@@ -905,7 +905,7 @@ elif page == "相關研究成果":
         
         st.markdown("""
         <div style="font-size: 13.5px; line-height: 1.7; color: #0C0E0B; margin-top: 20px; background-color: #FFFFFF; padding: 16px; border-radius: 10px; border: 1px solid #B7CEAD;">
-            <b>💡 互動沙盤機制說明：</b> 透過上方專屬滑桿的即時調整，當共贏勝率高於或等於 50% 時儀表板呈現綠色高效運轉；若因參數設定不當導致勝率<b>低於 50%</b>，則會立即切換為<b>紅色警戒</b>並示警，完美呈現計量經濟學中的決策邊界與檢定防線。
+            <b>💡 v3 邊界機制與紅綠二分說明：</b> 本互動沙盤完全依照同學 v3 報告之計量模型建構。當動態共贏勝率小於 50% 時，儀表板會嚴格轉為紅色示警，展現出若補貼過高或氣候過於極端時系統將面臨的財務挑戰；當參數回到最佳化區間時則恢復綠色共贏。
         </div>
         """, unsafe_allow_html=True)
 # ==========================================
