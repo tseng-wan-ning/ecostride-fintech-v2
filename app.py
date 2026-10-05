@@ -811,15 +811,16 @@ elif page == "相關研究成果":
     years_axis = [f"第 {i} 年" for i in range(11)]
 
 # ==========================================
-    # 🌿 面向一：消費者端研究 (自包含安全防護與圖像化版)
+    # 🌿 面向一：消費者端研究 (修復變數報錯與下拉選單聯動版)
     # ==========================================
     with tab_res1:
         st.markdown("<h4 style='color:#2D4A22 !important; font-weight:800; margin-top:10px;'>消費者行為財富分化與普惠資產累積動態沙盤</h4>", unsafe_allow_html=True)
         st.markdown("<p style='font-size:13px; color:#555;'>依據同學提供的後台個體逐週模擬與族群模型引擎，動態檢視不同運動族群在 5 年參與期內的生產性綠色資產複利累積與普惠達成率：</p>", unsafe_allow_html=True)
         
-        # 宣告相依全域常數與精算函式，確保完全自包含
+        # 宣告在地常數與顏色，徹底解決 PCOL NameError
         WPY_local = 52
         PROFILES_local = ["High", "Medium", "Low"]
+        PCOL_local = ["#2a78d6", "#eb6834", "#1baf7a"]  # 藍、橘、綠專屬色系
         
         if 'central_draws' not in globals():
             def central_draws(cfg, S=1):
@@ -855,7 +856,7 @@ elif page == "相關研究成果":
                 wallet, cash = np.zeros(N), np.zeros(N)
                 cum_rew, yr_ach, blk = np.zeros(N), np.zeros(N), np.zeros(N)
                 snaps, cumr, rows = {}, {}, []
-                t5k, t10k = np.full(N, np.nan), np.full(N, np.nan)
+                t5k = np.full(N, np.nan)
                 r_w = CFG.r_user / WPY_local
                 
                 for w in range(Wn):
@@ -900,7 +901,7 @@ elif page == "相關研究成果":
                 val = wallet + cash
                 n5 = np.isnan(t5k) & (val >= 5_000)
                 t5k[n5] = (w + 1) / WPY_local
-                return dict(prof=prof, p_i=p_i, value=snaps, cum_rew=cumr, t5k=t5k, t10k=t10k,
+                return dict(prof=prof, p_i=p_i, value=snaps, cum_rew=cumr, t5k=t5k,
                             t_drop=t_drop, t_lapse=t_lapse, annual=pd.DataFrame(rows))
 
         # 互動控制面板
@@ -921,58 +922,72 @@ elif page == "相關研究成果":
         v_target = sim_results["value"][interactive_years]
         stay_mask = (sim_results["t_drop"] >= interactive_years) & (sim_results["t_lapse"] >= interactive_years)
         
-        profile_stats = []
-        for g_idx, g_name in enumerate(PROFILES_local):
-            mask_g = sim_results["prof"] == g_idx
-            mask_stay = mask_g & stay_mask
-            profile_stats.append({
-                "族群": g_name,
-                "人數占比": f"{mask_g.mean()*100:.0f}%",
-                "全程參與率": f"{mask_stay.mean()*100:.1f}%",
-                "平均帳戶價值(含退出)": v_target[mask_g].mean(),
-                "全程參與者平均": v_target[mask_stay].mean() if mask_stay.any() else 0,
-                "P90 頂尖資產": np.percentile(v_target[mask_stay], 90) if mask_stay.any() else 0
-            })
-        df_stats = pd.DataFrame(profile_stats).set_index("族群")
+        # 根據下拉選單過濾族群索引
+        if "High" in profile_view_mode:
+            target_indices = [0]
+            profile_label = "High 高活躍族群"
+        elif "Medium" in profile_view_mode:
+            target_indices = [1]
+            profile_label = "Medium 典型保戶"
+        elif "Low" in profile_view_mode:
+            target_indices = [2]
+            profile_label = "Low 低活躍族群"
+        else:
+            target_indices = [0, 1, 2]
+            profile_label = "全體總覽"
 
-        # 上方計量卡片
+        # 計算選定族群的統計數據
+        mask_profile = np.isin(sim_results["prof"], target_indices)
+        mask_stay_profile = mask_profile & stay_mask
+        
+        avg_val_display = v_target[mask_profile].mean()
+        stay_rate_display = mask_stay_profile.mean() * 100 if mask_profile.any() else 0
+
+        # 上方動態計量卡片（會隨著下拉選單即時變動數值！）
         col_c1, col_c2, col_c3 = st.columns(3)
         with col_c1:
             st.markdown(f"""
             <div class="metric-card" style="border-top: 4px solid #83A474;">
-                <div class="metric-value-green">NT$ {v_target[sim_results["prof"]==1].mean():,.0f}</div>
-                <div class="metric-label">Medium 典型保戶平均資產 ({interactive_years}年)</div>
+                <div class="metric-value-green">NT$ {avg_val_display:,.0f}</div>
+                <div class="metric-label">{profile_label} 平均資產 ({interactive_years}年)</div>
             </div>
             """, unsafe_allow_html=True)
         with col_c2:
             st.markdown(f"""
             <div class="metric-card" style="border-top: 4px solid #0C0E0B;">
-                <div class="metric-value-blue">{(stay_mask[sim_results["prof"]==1]).mean()*100:.1f}%</div>
-                <div class="metric-label">Medium 族群長期續留率</div>
+                <div class="metric-value-blue">{stay_rate_display:.1f}%</div>
+                <div class="metric-label">{profile_label} 長期續留率</div>
             </div>
             """, unsafe_allow_html=True)
         with col_c3:
             st.markdown(f"""
             <div class="metric-card" style="border-top: 4px solid #92BA80;">
-                <div class="metric-value-green">{ (sim_results["t5k"] <= interactive_years).mean()*100:.1f}%</div>
-                <div class="metric-label">全體用戶達投資門檻 ($5,000) 比例</div>
+                <div class="metric-value-green">{(sim_results["t5k"][mask_profile] <= interactive_years).mean()*100:.1f}%</div>
+                <div class="metric-label">{profile_label} 達投資門檻 ($5,000) 比例</div>
             </div>
             """, unsafe_allow_html=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
 
-        # 圖像化一：跨期資產成長軌跡圖
+        # 圖像化一：跨期資產成長軌跡圖 (會根據選擇的族群呈現對應軌跡)
         yrs_axis = list(range(1, CFG.years + 1))
         fig_asset = go.Figure()
         
-        avg_path = [sim_results["value"][y].mean() for y in range(1, CFG.years + 1)]
-        medium_stay_path = [sim_results["value"][y][(sim_results["prof"]==1) & (sim_results["t_drop"]>=y) & (sim_results["t_lapse"]>=y)].mean() for y in range(1, CFG.years + 1)]
-        
-        fig_asset.add_trace(go.Scatter(x=yrs_axis, y=avg_path, name="EcoStride 全體平均資產市值", line=dict(color="#83A474", width=4)))
-        fig_asset.add_trace(go.Scatter(x=yrs_axis, y=medium_stay_path, name="EcoStride (Medium 典型保戶, 全程參與)", line=dict(color="#2D4A22", width=3, dash="dot")))
+        if len(target_indices) == 1:
+            g_idx = target_indices[0]
+            g_name = PROFILES_local[g_idx]
+            sub_path = [sim_results["value"][y][sim_results["prof"]==g_idx].mean() for y in range(1, CFG.years + 1)]
+            sub_stay_path = [sim_results["value"][y][(sim_results["prof"]==g_idx) & (sim_results["t_drop"]>=y) & (sim_results["t_lapse"]>=y)].mean() for y in range(1, CFG.years + 1)]
+            fig_asset.add_trace(go.Scatter(x=yrs_axis, y=sub_path, name=f"{g_name} 平均資產市值", line=dict(color=PCOL_local[g_idx], width=4)))
+            fig_asset.add_trace(go.Scatter(x=yrs_axis, y=sub_stay_path, name=f"{g_name} (全程參與)", line=dict(color="#2D4A22", width=3, dash="dot")))
+        else:
+            avg_path = [sim_results["value"][y].mean() for y in range(1, CFG.years + 1)]
+            medium_stay_path = [sim_results["value"][y][(sim_results["prof"]==1) & (sim_results["t_drop"]>=y) & (sim_results["t_lapse"]>=y)].mean() for y in range(1, CFG.years + 1)]
+            fig_asset.add_trace(go.Scatter(x=yrs_axis, y=avg_path, name="EcoStride 全體平均資產市值", line=dict(color="#83A474", width=4)))
+            fig_asset.add_trace(go.Scatter(x=yrs_axis, y=medium_stay_path, name="EcoStride (Medium 典型保戶, 全程參與)", line=dict(color="#2D4A22", width=3, dash="dot")))
         
         fig_asset.update_layout(
-            title=f"每位參加者平均累積價值對比 (R* = {interactive_r:.1f} 元／週)",
+            title=f"【{profile_label}】每位參加者平均累積價值對比 (R* = {interactive_r:.1f} 元／週)",
             template="plotly_white",
             height=380,
             xaxis=dict(title="年度 (Year)"),
@@ -981,20 +996,21 @@ elif page == "相關研究成果":
         )
         st.plotly_chart(fig_asset, use_container_width=True)
 
-        # 圖像化二：各族群資產分布箱形圖
+        # 圖像化二：各族群資產分布箱形圖 (使用 PCOL_local 陣列)
         col_g1, col_g2 = st.columns([1.2, 1])
         with col_g1:
             fig_box = go.Figure()
-            for g_idx, g_name in enumerate(PROFILES_local):
+            for g_idx in target_indices:
+                g_name = PROFILES_local[g_idx]
                 subset_vals = v_target[(sim_results["prof"] == g_idx) & stay_mask]
                 fig_box.add_trace(go.Box(
                     y=subset_vals,
                     name=g_name,
-                    marker_color=PCOL[g_idx],
+                    marker_color=PCOL_local[g_idx],
                     boxmean=True
                 ))
             fig_box.update_layout(
-                title=f"第 {interactive_years} 年全程參與者資產分化箱形圖",
+                title=f"第 {interactive_years} 年全程參與者資產分化箱形圖 ({profile_label})",
                 template="plotly_white",
                 height=340,
                 yaxis=dict(title="帳戶總市值 (NT$)"),
@@ -1003,14 +1019,25 @@ elif page == "相關研究成果":
             st.plotly_chart(fig_box, use_container_width=True)
 
         with col_g2:
-            st.markdown("<h5 style='color:#2D4A22; margin-top:5px;'>族群資產分化精算摘要表</h5>", unsafe_allow_html=True)
-            st.markdown("<p style='font-size:12px; color:#555;'>個人化基準縮小了資產差距：</p>", unsafe_allow_html=True)
-            st.dataframe(df_stats[["人數占比", "全程參與率", "全程參與者平均"]], use_container_width=True)
+            st.markdown(f"<h5 style='color:#2D4A22; margin-top:5px;'>族群資產分化摘要表 ({profile_label})</h5>", unsafe_allow_html=True)
+            profile_stats = []
+            for g_idx in target_indices:
+                g_name = PROFILES_local[g_idx]
+                mask_g = sim_results["prof"] == g_idx
+                mask_stay = mask_g & stay_mask
+                profile_stats.append({
+                    "族群": g_name,
+                    "人數占比": f"{mask_g.mean()*100:.0f}%",
+                    "全程參與率": f"{mask_stay.mean()*100:.1f}%",
+                    "全程參與者平均": f"NT$ {v_target[mask_stay].mean():,.0f}" if mask_stay.any() else "N/A"
+                })
+            df_stats_sub = pd.DataFrame(profile_stats).set_index("族群")
+            st.dataframe(df_stats_sub, use_container_width=True)
 
         st.markdown(f"""
         <div class="alert-card">
             <b>【消費者端研究核心結論】</b> 透過每週達標制（$R^* = {interactive_r:.1f}$ 元）與 3.5% 綠能實體資產票息再投資，
-            參加者在第 {interactive_years} 年所累積的生產性資本顯著成長。個人化基準設計成功消弭了因先天體能差異導致的資產鴻溝。
+            當前觀測的 <b>{profile_label}</b> 在第 {interactive_years} 年展現出穩健的生產性資本複利增長。
         </div>
         """, unsafe_allow_html=True)
 # ==========================================
