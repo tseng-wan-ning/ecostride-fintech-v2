@@ -7,7 +7,7 @@ import streamlit.components.v1 as components
 from dataclasses import dataclass
 
 # ==========================================
-# 0. 同學最新版 EcoStride v3 Config 與精算核心
+# 0. 專案 Config 與精算核心
 # ==========================================
 @dataclass(frozen=True)
 class Config:
@@ -52,7 +52,7 @@ class Config:
     def r_user(self): return self.coupon * (1 - self.insurer_coupon_share) - self.platform_fee
 
 CFG = Config()
-R_STAR_DEFAULT = 30.5  # v3 研究報告校準之預算中立每週回饋
+R_STAR_DEFAULT = 30.5  # 研究報告校準之預算中立每週回饋
 
 # ==========================================
 # 0-2. 全局環境配置與指定五色高質感 CSS 注入
@@ -734,23 +734,23 @@ elif page == "APP 介面展示":
             st.markdown("<p style='text-align:center; font-size:13px; font-weight:700; color:#0C0E0B; margin-top:10px;'>畫面 C：實體資產與財富面板</p>", unsafe_allow_html=True)
 
 # ==========================================
-# 7. 🎯 分頁四：相關研究成果 (完全對齊同學 v3 動態精算終端)
+# 7. 🎯 分頁四：相關研究成果
 # ==========================================
 elif page == "相關研究成果":
-    st.markdown("<h2 style='color:#2D4A22 !important; font-size:32px; font-weight:800;'>相關研究成果 ── 彭博精算終端動態沙盤 (v3)</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='font-size:14px; color:#0C0E0B; opacity:0.8; font-weight:500;'>調整左方邊界條件後，各項財務指標與保險公司不輸機率將完全依照同學的蒙地卡羅矩陣即時連動重算。</p>", unsafe_allow_html=True)
+    st.markdown("<h2 style='color:#2D4A22 !important; font-size:32px; font-weight:800;'>相關研究成果 ── 彭博精算終端動態沙盤</h2>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size:14px; color:#0C0E0B; opacity:0.8; font-weight:500;'>本組成果已深度嵌入後台 Python 精算核心。調整左方邊界條件後，各項財務指標與保險公司不輸機率將完全依照蒙地卡羅矩陣即時連動重算。</p>", unsafe_allow_html=True)
     st.markdown("---")
 
     col_res_left, col_res_right = st.columns([1.1, 3])
     
     with col_res_left:
         st.markdown("<div style='background-color:#FFFFFF; border:1px solid #B7CEAD; padding:24px; border-radius:14px;'>", unsafe_allow_html=True)
-        st.markdown("<h4 style='color:#0C0E0B !important; margin-top:0; font-weight:800; border-bottom:1px solid #eee; padding-bottom:8px;'>v3 全域精算控制台</h4>", unsafe_allow_html=True)
+        st.markdown("<h4 style='color:#0C0E0B !important; margin-top:0; font-weight:800; border-bottom:1px solid #eee; padding-bottom:8px;'>全域精算控制台</h4>", unsafe_allow_html=True)
         
         param_r_star = st.slider("每週預算中立回饋 R* (元/達標週)", 20.0, 50.0, R_STAR_DEFAULT, 1.0)
         param_steps_inc = st.slider("保戶平均健走提升率", 0.05, 0.50, 0.20, 0.05)
         param_consistency = st.slider("全域行為穩定度因子", 0.30, 1.00, 0.75, 0.05)
-        param_rain_shock = st.selectbox("氣候季節衝擊情境", ["梅雨/高日照自然波動 (標準 v3)", "極端降雨氣候衝擊 (-35% 發電)", "晴雨交替穩定情境"])
+        param_rain_shock = st.selectbox("氣候季節衝擊情境", ["梅雨/高日照自然波動 (標準)", "極端降雨氣候衝擊 (-35% 發電)", "晴雨交替穩定情境"])
         
         st.markdown("<br>", unsafe_allow_html=True)
         run_sim = st.button("執行 5,000 次蒙地卡羅動態模擬 ⚡")
@@ -780,13 +780,13 @@ elif page == "相關研究成果":
                 time.sleep(0.01)
                 progress_bar.progress(percent_complete)
             progress_bar.empty()
-            st.toast("⚡ v3 跨界聯立財務矩陣 5,000 次隨機清算完成！", icon="✅")
+            st.toast("⚡ 跨界聯立財務矩陣 5,000 次隨機清算完成！", icon="✅")
 
         metric_slot1.markdown(f"""
         <div style="display: flex; gap: 12px; margin-bottom: 15px;">
             <div class="metric-card" style="border-top: 4px solid #83A474; flex: 1;">
                 <div class="metric-value-green">{base_win_ratio:.1f}%</div>
-                <div class="metric-label">三方共贏機率 (v3)</div>
+                <div class="metric-label">三方共贏機率</div>
             </div>
             <div class="metric-card" style="border-top: 4px solid #0C0E0B; flex: 1;">
                 <div class="metric-value-blue">{dynamic_ins_win:.1f}%</div>
@@ -814,14 +814,14 @@ elif page == "相關研究成果":
     # 🌿 面向一：消費者（用戶）子分頁
     # ==========================================
     with tab_res1:
-        st.markdown("<h4 style='color:#2D4A22 !important; font-weight:800; margin-top:10px;'>財富分化與生產性資產跨期對比 (v3 實證)</h4>", unsafe_allow_html=True)
-        st.markdown("<p style='font-size:13px; color:#555;'>依據同學 v3 模型：5 年全程參與者帳戶市值分別為：High 6,646 元、Medium 4,799 元、Low 2,713 元。您可以自由切換觀測：</p>", unsafe_allow_html=True)
+        st.markdown("<h4 style='color:#2D4A22 !important; font-weight:800; margin-top:10px;'>財富分化與生產性資產跨期對比 (實證)</h4>", unsafe_allow_html=True)
+        st.markdown("<p style='font-size:13px; color:#555;'>依據模型：5 年全程參與者帳戶市值分別為：High 6,646 元、Medium 4,799 元、Low 2,713 元。您可以自由切換觀測：</p>", unsafe_allow_html=True)
         
-        selected_profile_v3 = st.radio("選擇要動態觀測的用戶運動特徵：", ["Low 低活躍族群", "Medium 典型保戶", "High 高活躍族群"], horizontal=True, key="p_v3")
+        selected_profile = st.radio("選擇要動態觀測的用戶運動特徵：", ["Low 低活躍族群", "Medium 典型保戶", "High 高活躍族群"], horizontal=True, key="p_v3")
         
-        if "High" in selected_profile_v3:
+        if "High" in selected_profile:
             target_wealth = 6646
-        elif "Medium" in selected_profile_v3:
+        elif "Medium" in selected_profile:
             target_wealth = 4799
         else:
             target_wealth = 2713
@@ -830,14 +830,14 @@ elif page == "相關研究成果":
         trad_point_path = [1194 * (i/5) if i<=5 else 1194 + (i-5)*180 for i in range(11)]
             
         fig_user = go.Figure()
-        fig_user.add_trace(go.Scatter(x=years_axis, y=user_wealth_path, name=f"EcoStride {selected_profile_v3} 複利資產市值", line=dict(color="#83A474", width=4)))
+        fig_user.add_trace(go.Scatter(x=years_axis, y=user_wealth_path, name=f"EcoStride {selected_profile} 複利資產市值", line=dict(color="#83A474", width=4)))
         fig_user.add_trace(go.Scatter(x=years_axis, y=trad_point_path, name="傳統點數方案價值軌跡", line=dict(color="#E53E3E", dash="dash", width=2)))
-        fig_user.update_layout(title=f"{selected_profile_v3} 跨期資產複利滾存與傳統方案對比", template="plotly_white", height=380, margin=dict(l=40,r=40,t=40,b=40))
+        fig_user.update_layout(title=f"{selected_profile} 跨期資產複利滾存與傳統方案對比", template="plotly_white", height=380, margin=dict(l=40,r=40,t=40,b=40))
         st.plotly_chart(fig_user, use_container_width=True)
         
         st.markdown(f"""
         <div class='alert-card'>
-            <b>【v3 模型解讀】</b> 透過每週達標制（$R^* = {param_r_star}$ 元）與 3.5% 票息再投資，{selected_profile_v3} 在參與期結束後可穩定累積 <b>NT$ {target_wealth:,.0f}</b> 之綠能資產市值，超越傳統外溢點數方案近 2.5 倍。
+            <b>【模型解讀】</b> 透過每週達標制（$R^* = {param_r_star}$ 元）與 3.5% 票息再投資，{selected_profile} 在參與期結束後可穩定累積 <b>NT$ {target_wealth:,.0f}</b> 之綠能資產市值，超越傳統外溢點數方案近 2.5 倍。
         </div>
         """, unsafe_allow_html=True)
 
@@ -889,8 +889,8 @@ elif page == "相關研究成果":
     # 🔄 面向四：整體循環模式
     # ==========================================
     with tab_res4:
-        st.markdown("<h4 style='color:#2D4A22 !important; font-weight:800; margin-top:10px;'>生態系成功啟動之三方共贏機率與邊界條件 (v3 互動沙盤)</h4>", unsafe_allow_html=True)
-        st.markdown("<p style='font-size:13px; color:#555;'>您可以直接調整下方參數滑桿與氣候情境。當共贏機率低於 50% 時，儀表板將自動顯示為嚴格的<b>紅色警戒</b>；高於 50% 則呈現<b>綠色高效運轉</b>：</p>", unsafe_allow_html=True)
+        st.markdown("<h4 style='color:#2D4A22 !important; font-weight:800; margin-top:10px;'>生態系成功啟動之三方共贏機率與邊界條件 (互動沙盤)</h4>", unsafe_allow_html=True)
+        st.markdown("<p style='font-size:13px; color:#555;'>您可以<b>直接調整下方參數滑桿與氣候情境</b>。當共贏機率低於 50% 時，儀表板將自動顯示為嚴格的<b>紅色警戒</b>；高於 50% 則呈現<b>綠色高效運轉</b>：</p>", unsafe_allow_html=True)
         
         st.markdown("""
             <style>
@@ -907,16 +907,16 @@ elif page == "相關研究成果":
             """, unsafe_allow_html=True)
 
         st.markdown("<div style='background-color:#FFFFFF; border:1px solid #B7CEAD; padding:20px; border-radius:12px; margin-bottom:20px;'>", unsafe_allow_html=True)
-        st.markdown("<b style='color:#2D4A22; font-size:15px;'>🎛️ v3 聯立動態沙盤參數控制台</b>", unsafe_allow_html=True)
+        st.markdown("<b style='color:#2D4A22; font-size:15px;'>🎛️ 聯立動態沙盤參數控制台</b>", unsafe_allow_html=True)
         
         col_c1, col_c2 = st.columns(2)
         with col_c1:
-            tab4_r_star = st.slider("每週預算中立回饋 R* (元/達標週)", 20.0, 50.0, param_r_star, 1.0, key="t4_r_v3")
-            tab4_steps_inc = st.slider("保戶平均健走提升率", 0.05, 0.50, param_steps_inc, 0.05, key="t4_s_v3")
+            tab4_r_star = st.slider("每週預算中立回饋 R* (元/達標週)", 20.0, 50.0, R_STAR_DEFAULT, 1.0, key="t4_r_v3")
+            tab4_steps_inc = st.slider("保戶平均健走提升率", 0.05, 0.50, tab4_steps_inc if 'tab4_steps_inc' in locals() else 0.20, 0.05, key="t4_s_v3")
         with col_c2:
-            tab4_consistency = st.slider("全域行為穩定度因子", 0.30, 1.00, param_consistency, 0.05, key="t4_c_v3")
+            tab4_consistency = st.slider("全域行為穩定度因子", 0.30, 1.00, tab4_consistency if 'tab4_consistency' in locals() else 0.75, 0.05, key="t4_c_v3")
             st.markdown("<div style='font-size: 14px; font-weight: 600; color: #2D4A22; margin-bottom: 5px;'>🌱 季節氣候衝擊情境 (壓力測試)</div>", unsafe_allow_html=True)
-            tab4_rain_shock = st.selectbox("", ["梅雨/高日照自然波動 (標準 v3)", "極端降雨氣候衝擊 (-35% 發電)", "晴雨交替穩定情境"], key="t4_rain_v3", label_visibility="collapsed")
+            tab4_rain_shock = st.selectbox("", ["梅雨/高日照自然波動 (標準)", "極端降雨氣候衝擊 (-35% 發電)", "晴雨交替穩定情境"], key="t4_rain_v3", label_visibility="collapsed")
         st.markdown("</div>", unsafe_allow_html=True)
 
         dynamic_win_ratio_t4 = 67.3 + (tab4_r_star - 30.5) * -0.8 + (tab4_steps_inc - 0.20) * 35 + (tab4_consistency - 0.75) * 25
@@ -968,7 +968,7 @@ elif page == "相關研究成果":
         with col_res_text:
             st.markdown(f"""
             <div style='background-color:#FFFFFF; border:1px solid #B7CEAD; padding:22px; border-radius:12px; box-shadow: 0 4px 12px rgba(0,0,0,0.01);'>
-                <b style='font-size:16px; color:#2D4A22;'>v3 動態聯立沙盤即時清算解讀</b><br>
+                <b style='font-size:16px; color:#2D4A22;'>動態聯立沙盤即時清算解讀</b><br>
                 <div style="margin-top:12px; line-height: 1.8; font-size: 14px;">
                     • 每週預算中立回饋: <b>R* = {tab4_r_star} 元/週</b><br>
                     • 保戶平均步數成長率: <b>{tab4_steps_inc*100:.0f}%</b><br>
@@ -991,7 +991,7 @@ elif page == "相關研究成果":
 st.markdown("<br>", unsafe_allow_html=True)
 with st.expander("📄 檢視後台核心複利精算公式 (互鎖定量金融與資管代碼)"):
     st.code("""
-# EcoStride v3 智慧合約跨期核心資產滾存演算法
+# 智慧合約跨期核心資產滾存演算法
 def calculate_compounding_rwa_wealth(excess_steps, alpha=0.00065, beta=0.0001, gamma=CFG.gamma, consistency=0.75, rwa_yield_base=CFG.coupon, insurance_share_yield=CFG.insurer_coupon_share, mu_market=0.05):
     weekly_reward = R_STAR_DEFAULT * consistency
     annual_investment = weekly_reward * 52
