@@ -896,25 +896,92 @@ elif page == "相關研究成果":
         """, unsafe_allow_html=True)
 
 # ==========================================
-    # ⚡ 面向三：綠能產業端研究 (屬性完整防護版)
+    # ⚡ 面向三：綠能產業端研究 (自包含安全防護版)
     # ==========================================
     with tab_res3:
         st.markdown("<h4 style='color:#2D4A22 !important; font-weight:800; margin-top:10px;'>綠能電廠 20 年現金流瀑布與 DSCR 壓力測試</h4>", unsafe_allow_html=True)
         st.markdown("<p style='font-size:13px; color:#555;'>依據後台蒙地卡羅模組（含發電氣候變異、颱風毀損機率、MMRA 變流器汰換提撥與 DSCR 償債覆蓋率計算）：</p>", unsafe_allow_html=True)
         
+        # 確保內部函式獨立可用，避免 NameError
+        if 'annuity' not in globals():
+            def annuity(P, r, n):
+                return P * r / (1 - (1 + r) ** -n)
+
+        if 'irr_vec' not in globals():
+            def irr_vec(cfs, lo=-0.9, hi=1.0, it=100):
+                cfs = np.atleast_2d(cfs)
+                t = np.arange(cfs.shape[1])
+                f = lambda r: (cfs / (1 + r[:, None]) ** t).sum(1)
+                lo, hi = np.full(len(cfs), lo), np.full(len(cfs), hi)
+                flo = f(lo)
+                for _ in range(it):
+                    mid = (lo + hi) / 2
+                    fm = f(mid)
+                    left = np.sign(fm) == np.sign(flo)
+                    lo, flo = np.where(left, mid, lo), np.where(left, fm, flo)
+                    hi = np.where(left, hi, mid)
+                return (lo + hi) / 2
+
+        if 'simulate_developer' not in globals():
+            def simulate_developer(cfg, n, seed, rate, admin=0.0, issue_cost=0.0):
+                rng = np.random.default_rng(seed)
+                L, T = cfg.project_life, cfg.debt_tenor
+                cap, capex, debt = cfg.capacity_kw, cfg.capex_total, cfg.sto_raise
+                yrs = np.arange(L)
+                clim = np.exp(rng.normal(-0.05 ** 2 / 2, 0.05, (n, L)))
+                typh = rng.random((n, L)) < 0.05
+                tloss = rng.uniform(0.02, 0.10, (n, L)) * typh
+                gen_factor = clim * (1 - tloss)
+                rev = cap * 1250 * (1 - 0.006) ** yrs * gen_factor * 3.5037
+                opex = 0.0329 * capex * (1.0) ** yrs + typh * 300_000
+                inv = 2000 * cap
+                opex[:, :12] += inv / 12
+                cfads = rev - opex
+                pmt = annuity(debt, rate, T)
+                bal = np.zeros(L + 1); bal[0] = debt
+                for t in range(T):
+                    bal[t + 1] = bal[t] * (1 + rate) - pmt
+                ds = np.where(yrs < T, pmt + admin * bal[:L], 0.0)
+                dsra_target = 6 / 12 * pmt
+                dsra, trap = np.full(n, dsra_target), np.zeros(n)
+                default_year = np.full(n, np.nan)
+                alive = np.ones(n, bool)
+                dist = np.zeros((n, L))
+                for t in range(L):
+                    sur = cfads[:, t] - ds[t]
+                    short = alive & (sur < 0)
+                    need = np.where(short, -sur, 0)
+                    from_trap = np.minimum(trap, need); trap -= from_trap; need -= from_trap
+                    from_dsra = np.minimum(dsra, need); dsra -= from_dsra; need -= from_dsra
+                    newly_def = short & (need > 1e-6)
+                    default_year[newly_def] = t
+                    alive &= ~newly_def
+                    pos = alive & (sur > 0)
+                    tgt = dsra_target if t < T - 1 else 0.0
+                    topup = np.where(pos, np.minimum(sur, np.maximum(tgt - dsra, 0)), 0)
+                    dsra += topup
+                    rest = np.where(pos, sur - topup, 0)
+                    lock = (cfads[:, t] / ds[t] < 1.10) if ds[t] > 0 else np.zeros(n, bool)
+                    trap += np.where(lock, rest, 0)
+                    release = np.where(~lock & alive, trap, 0); trap -= release
+                    dist[:, t] = np.where(alive, np.where(lock, 0, rest) + release, 0)
+                    dist[:, -1] += np.where(alive, trap + dsra, 0)
+                equity0 = capex + dsra_target - debt * (1 - issue_cost)
+                eq_irr = irr_vec(np.c_[-np.full(n, equity0), dist])
+                dscr = cfads[:, :T] / ds[:T]
+                return dict(n=n, default_year=default_year, dscr=dscr, min_dscr=dscr.min(1), eq_irr=eq_irr, clim_index=gen_factor[:, :10].mean(1))
+
         col_e1, col_e2 = st.columns(2)
         with col_e1:
             fin_mode = st.radio("融資工具比較：", ["STO 綠能發行 (3.5%)", "傳統銀行聯貸 (3.0%)"], horizontal=True, key="fin_mode_radio")
         with col_e2:
             typhoon_risk_slider = st.slider("颱風災害發生機率設定 (%)：", 1, 15, 5, 1, key="typhoon_slider_res")
 
-        # 安全防護：直接給定數值，避免 Config 屬性缺失報錯
         current_rate = 0.035 if "STO" in fin_mode else 0.030
         admin_fee = 0.002 if "STO" in fin_mode else 0.0
         issue_fee = 0.02 if "STO" in fin_mode else 0.005
         
-        # 執行開發商模型
-        dev_sim_result = simulate_developer(CFG, n=2000, seed=SEED+10, rate=current_rate, admin=admin_fee, issue_cost=issue_fee)
+        dev_sim_result = simulate_developer(CFG, n=2000, seed=2026+10, rate=current_rate, admin=admin_fee, issue_cost=issue_fee)
         
         mean_dscr_path = dev_sim_result["dscr"].mean(axis=0)
         dscr_years_label = [f"第 {t+1} 年" for t in range(len(mean_dscr_path))]
