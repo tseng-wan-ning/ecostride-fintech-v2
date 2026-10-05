@@ -622,7 +622,7 @@ elif page == "提案動機與模式介紹":
         """, unsafe_allow_html=True)
 
 # ==========================================
-# 6. 分頁三：APP 介面展示 (iframe 完美擬真手機版)
+# 6. 分頁三：APP 介面展示 (完整修復結尾版)
 # ==========================================
 elif page == "APP 介面展示":
     current_r_star = globals().get('R_STAR', 30.5)
@@ -666,7 +666,6 @@ elif page == "APP 介面展示":
         accumulated_rwa_val = accumulated_rwa_val * (1 + r_w_weekly) + w_pay
 
     with col_ui_right:
-        # 決定手機內部顯示內容
         if "①" in app_tab_view:
             screen_content = f"""
                 <div style="font-size:10px; font-weight:800; color:#83A474; text-align:center; letter-spacing:1px; margin-bottom:8px;">DAILY HEALTH DASHBOARD</div>
@@ -775,248 +774,20 @@ elif page == "APP 介面展示":
         </body>
         </html>
         """
-        
         st.components.v1.html(phone_html, height=500)
 
     st.markdown("<br>", unsafe_allow_html=True)
     
+    # 底部動態趨勢圖（括號與參數 100% 閉合）
     fig_app_trend = go.Figure()
     yrs_arr = list(range(1, 6))
-    simulated_path = [accumulated_rwa_val * (y/5) * (1.1 if y>1 else 1.0) for y in yrs_arr]
+    simulated_path = [accumulated_rwa_val * (y / 5) * (1.1 if y > 1 else 1.0) for y in yrs_arr]
     legacy_path_app = [1194 * y for y in yrs_arr]
     
     fig_app_trend.add_trace(go.Scatter(x=yrs_arr, y=simulated_path, name="EcoStride APP 用戶累積資產", line=dict(color="#83A474", width=3)))
-    fig_app_trend.add_trace(go.Scatter(x=
-                                       
-# ==========================================
-    # 🏥 面向二：保險公司端研究
-    # ==========================================
-    with tab_res2:
-        st.markdown("<h4 style='color:#2D4A22 !important; font-weight:800; margin-top:10px;'>預防成本資本化與理賠損失率動態分佈測試</h4>", unsafe_allow_html=True)
-        
-        steps_inc_slider = st.slider("調整保戶平均步數預期提升幅度 (%)：", 5, 40, 20, 5, key="actuarial_slider_res")
-        
-        elasticity = -0.15
-        target_reduction = abs((steps_inc_slider / 100.0) * elasticity)
-        optimized_loss_ratio = 0.75 * (1.0 - target_reduction)
-        
-        loss_x = np.linspace(0.55, 0.85, 100)
-        density_optimized = np.exp(-(loss_x - optimized_loss_ratio)**2 / (2 * 0.022**2))
-        density_baseline = np.exp(-(loss_x - 0.75)**2 / (2 * 0.025**2))
-        
-        fig_ins = go.Figure()
-        fig_ins.add_trace(go.Scatter(x=loss_x*100, y=density_optimized, name="補貼後預期理賠損失率分佈", fill='tozeroy', line=dict(color="#83A474", width=3)))
-        fig_ins.add_trace(go.Scatter(x=loss_x*100, y=density_baseline, name="初始基準理賠損失率 (75%)", line=dict(color="#0C0E0B", dash="dash")))
-        fig_ins.update_layout(title="保險大盤理賠損失率機率密度函數精算圖", template="plotly_white", height=350)
-        st.plotly_chart(fig_ins, use_container_width=True)
-        
-        calc_roi = 0.55 + (steps_inc_slider / 20.0) * 0.48
-        roi_status = "🔥 進入正向獲利飛輪 (ROI >= 1.0)" if calc_roi >= 1.0 else "⚠️ 補貼過高/健康行為誘發不足"
-        
-        st.markdown(f"""
-        <table class="styled-table">
-            <tr>
-                <th>指標相（已排除研究編號）</th>
-                <th>初始基準狀態</th>
-                <th>動態精算校準值 (保戶步數提升 {steps_inc_slider}%)</th>
-                <th>金管會附加費用 10% 監管紅線判定</th>
-            </tr>
-            <tr>
-                <td><b>預期理賠損失率平均值</b></td>
-                <td>75.00%</td>
-                <td><b>{optimized_loss_ratio*100:.2f}%</b></td>
-                <td>精算折讓控制（實質理賠支出下降，風險剩餘維持 80%）</td>
-            </tr>
-            <tr>
-                <td><b>跨期累積總體投資 ROI</b></td>
-                <td>0.00</td>
-                <td><b>{calc_roi:.2f}</b></td>
-                <td>{roi_status}</td>
-            </tr>
-            <tr>
-                <td><b>95% 雙尾精算置信區間淨收益</b></td>
-                <td>不適用</td>
-                <td><b>[ +NT$ 11.2 萬 至 +NT$ 214.5 萬 ]</b></td>
-                <td>年度收益完全收斂在正向安全邊際內，完全合規</td>
-            </tr>
-        </table>
-        """, unsafe_allow_html=True)
-
-# ==========================================
-    # ⚡ 面向三：綠能產業端研究 (修復滑桿聯動連動版)
-    # ==========================================
-    with tab_res3:
-        st.markdown("<h4 style='color:#2D4A22 !important; font-weight:800; margin-top:10px;'>綠能電廠 20 年現金流瀑布與 DSCR 壓力測試</h4>", unsafe_allow_html=True)
-        st.markdown("<p style='font-size:13px; color:#555;'>依據後台蒙地卡羅模組（含發電氣候變異、動態颱風毀損機率、MMRA 變流器汰換提撥與 DSCR 償債覆蓋率計算）：</p>", unsafe_allow_html=True)
-        
-        # 宣告內部精算函式
-        if 'annuity' not in globals():
-            def annuity(P, r, n):
-                return P * r / (1 - (1 + r) ** -n)
-
-        if 'irr_vec' not in globals():
-            def irr_vec(cfs, lo=-0.9, hi=1.0, it=100):
-                cfs = np.atleast_2d(cfs)
-                t = np.arange(cfs.shape[1])
-                f = lambda r: (cfs / (1 + r[:, None]) ** t).sum(1)
-                lo, hi = np.full(len(cfs), lo), np.full(len(cfs), hi)
-                flo = f(lo)
-                for _ in range(it):
-                    mid = (lo + hi) / 2
-                    fm = f(mid)
-                    left = np.sign(fm) == np.sign(flo)
-                    lo, flo = np.where(left, mid, lo), np.where(left, fm, flo)
-                    hi = np.where(left, hi, mid)
-                return (lo + hi) / 2
-
-        # 升級：接收 typhoon_prob 參數，讓滑桿能真正控制氣候災害模擬
-        if 'simulate_developer' not in globals():
-            def simulate_developer(cfg, n, seed, rate, typhoon_prob=0.05, admin=0.0, issue_cost=0.0):
-                rng = np.random.default_rng(seed)
-                L = getattr(cfg, 'project_life', 20)
-                T = getattr(cfg, 'debt_tenor', 18)
-                capex = getattr(cfg, 'capex_total', 37500000)
-                debt = getattr(cfg, 'sto_raise', 30000000)
-                cap = getattr(cfg, 'capacity_kw', capex / 37400)
-                
-                yrs = np.arange(L)
-                clim = np.exp(rng.normal(-0.05 ** 2 / 2, 0.05, (n, L)))
-                
-                # 這裡改用傳入的 typhoon_prob 動態計算颱風發生率
-                typh = rng.random((n, L)) < typhoon_prob
-                tloss = rng.uniform(0.02, 0.10, (n, L)) * typh
-                gen_factor = clim * (1 - tloss)
-                
-                spec_yield = getattr(cfg, 'specific_yield', 1250)
-                deg = getattr(cfg, 'degradation', 0.006)
-                fit_val = getattr(cfg, 'fit', 3.5037)
-                rev = cap * spec_yield * (1 - deg) ** yrs * gen_factor * fit_val
-                
-                om_ratio = getattr(cfg, 'om_ratio', 0.0329)
-                om_esc = getattr(cfg, 'om_escalation', 0.0)
-                opex = om_ratio * capex * (1 + om_esc) ** yrs + typh * 300_000
-                
-                inv_yr = getattr(cfg, 'inverter_year', 12)
-                inv_cost = getattr(cfg, 'inverter_cost_per_kw', 2000) * cap
-                mmra_flag = getattr(cfg, 'mmra', True)
-                if mmra_flag:
-                    opex[:, :inv_yr] += inv_cost / inv_yr
-                else:
-                    opex[:, inv_yr - 1] += inv_cost
-                    
-                cfads = rev - opex
-                pmt = annuity(debt, rate, T)
-                bal = np.zeros(L + 1); bal[0] = debt
-                for t in range(T):
-                    bal[t + 1] = bal[t] * (1 + rate) - pmt
-                ds = np.where(yrs < T, pmt + admin * bal[:L], 0.0)
-                
-                dsra_months = getattr(cfg, 'dsra_months', 6)
-                dsra_target = dsra_months / 12 * pmt
-                dsra, trap = np.full(n, dsra_target), np.zeros(n)
-                default_year = np.full(n, np.nan)
-                alive = np.ones(n, bool)
-                dist = np.zeros((n, L))
-                cash_trap_dscr = getattr(cfg, 'cash_trap_dscr', 1.10)
-                
-                for t in range(L):
-                    sur = cfads[:, t] - ds[t]
-                    short = alive & (sur < 0)
-                    need = np.where(short, -sur, 0)
-                    from_trap = np.minimum(trap, need); trap -= from_trap; need -= from_trap
-                    from_dsra = np.minimum(dsra, need); dsra -= from_dsra; need -= from_dsra
-                    newly_def = short & (need > 1e-6)
-                    default_year[newly_def] = t
-                    alive &= ~newly_def
-                    pos = alive & (sur > 0)
-                    tgt = dsra_target if t < T - 1 else 0.0
-                    topup = np.where(pos, np.minimum(sur, np.maximum(tgt - dsra, 0)), 0)
-                    dsra += topup
-                    rest = np.where(pos, sur - topup, 0)
-                    lock = (cfads[:, t] / ds[t] < cash_trap_dscr) if ds[t] > 0 else np.zeros(n, bool)
-                    trap += np.where(lock, rest, 0)
-                    release = np.where(~lock & alive, trap, 0); trap -= release
-                    dist[:, t] = np.where(alive, np.where(lock, 0, rest) + release, 0)
-                    dist[:, -1] += np.where(alive, trap + dsra, 0)
-                    
-                equity0 = capex + dsra_target - debt * (1 - issue_cost)
-                eq_irr = irr_vec(np.c_[-np.full(n, equity0), dist])
-                dscr = cfads[:, :T] / ds[:T]
-                return dict(n=n, default_year=default_year, dscr=dscr, min_dscr=dscr.min(1), eq_irr=eq_irr, clim_index=gen_factor[:, :10].mean(1))
-
-        col_e1, col_e2 = st.columns(2)
-        with col_e1:
-            fin_mode = st.radio("融資工具比較：", ["STO 綠能發行 (3.5%)", "傳統銀行聯貸 (3.0%)"], horizontal=True, key="fin_mode_radio")
-        with col_e2:
-            typhoon_risk_slider = st.slider("颱風災害發生機率設定 (%)：", 1, 15, 5, 1, key="typhoon_slider_res")
-
-        current_rate = 0.035 if "STO" in fin_mode else 0.030
-        admin_fee = 0.002 if "STO" in fin_mode else 0.0
-        issue_fee = 0.02 if "STO" in fin_mode else 0.005
-        
-        # 讓亂數種子與 typhoon_risk_slider 連動，確保滑桿一拉，亂數結果就會即時跟著變動
-        dynamic_seed = 2026 + typhoon_risk_slider * 10
-        dev_sim_result = simulate_developer(
-            CFG, 
-            n=2000, 
-            seed=dynamic_seed, 
-            rate=current_rate, 
-            typhoon_prob=typhoon_risk_slider / 100.0,  # 真正將滑桿數值傳進後台模型！
-            admin=admin_fee, 
-            issue_cost=issue_fee
-        )
-        
-        mean_dscr_path = dev_sim_result["dscr"].mean(axis=0)
-        dscr_years_label = [f"第 {t+1} 年" for t in range(len(mean_dscr_path))]
-        
-        fig_energy = go.Figure()
-        fig_energy.add_trace(go.Scatter(
-            x=dscr_years_label, 
-            y=mean_dscr_path, 
-            mode='lines+markers',
-            name="平均 DSCR 軌跡",
-            line=dict(color="#83A474", width=3)
-        ))
-        
-        fig_energy.add_shape(type="line", x0=-0.5, x1=len(dscr_years_label)-0.5, y0=1.10, y1=1.10, 
-                             line=dict(color="#E53E3E", dash="dash", width=2))
-        
-        fig_energy.update_layout(
-            title=f"18年償債期平均償債覆蓋率 (DSCR) 走勢 — 模式：{fin_mode} (颱風設定: {typhoon_risk_slider}%)",
-            template="plotly_white", 
-            height=350, 
-            yaxis=dict(title="DSCR 均值 (安全門檻 1.10)")
-        )
-        st.plotly_chart(fig_energy, use_container_width=True)
-        
-        default_prob = (np.isfinite(dev_sim_result["default_year"])).mean() * 100
-        mean_equity_irr = dev_sim_result["eq_irr"].mean() * 100
-        min_dscr_median = np.median(dev_sim_result["min_dscr"])
-        
-        st.markdown(f"""
-        <table class="styled-table">
-            <tr>
-                <th>精算指標項目（對齊後台 2,000 次蒙地卡羅）</th>
-                <th>當前模擬數值表現 (颱風機率 {typhoon_risk_slider}%)</th>
-                <th>綠能資產安全邊際與合規判定</th>
-            </tr>
-            <tr>
-                <td><b>18年債務期累積違約機率</b></td>
-                <td><b>{default_prob:.2f}%</b></td>
-                <td>比照國家級案場標準，違約風險趨近於零</td>
-            </tr>
-            <tr>
-                <td><b>最低 DSCR 中位數 (Min DSCR)</b></td>
-                <td><b>{min_dscr_median:.2f}</b></td>
-                <td>高於現金匣抓取門檻（1.10），現金流安全性極佳</td>
-            </tr>
-            <tr>
-                <td><b>股東權益內部報酬率 (Equity IRR)</b></td>
-                <td><b>{mean_equity_irr:.2f}%</b></td>
-                <td>提供穩健且具吸引力之綠能實體資產報酬</td>
-            </tr>
-        </table>
-        """, unsafe_allow_html=True)
+    fig_app_trend.add_trace(go.Scatter(x=yrs_arr, y=legacy_path_app, name="傳統外溢點數方案 (立即消耗)", line=dict(color="#E53E3E", width=2, dash="dash")))
+    fig_app_trend.update_layout(title="【互動展示】使用者動態行為對應之 5 年資產成長預測", template="plotly_white", height=280, margin=dict(l=30, r=30, t=30, b=30))
+    st.plotly_chart(fig_app_trend, use_container_width=True)
     # ==========================================
     # 🔄 面向四：整體循環模式
     # ==========================================
