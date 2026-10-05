@@ -896,13 +896,13 @@ elif page == "相關研究成果":
         """, unsafe_allow_html=True)
 
 # ==========================================
-    # ⚡ 面向三：綠能產業端研究 (自包含安全防護版)
+    # ⚡ 面向三：綠能產業端研究 (getattr 屬性安全防護版)
     # ==========================================
     with tab_res3:
         st.markdown("<h4 style='color:#2D4A22 !important; font-weight:800; margin-top:10px;'>綠能電廠 20 年現金流瀑布與 DSCR 壓力測試</h4>", unsafe_allow_html=True)
         st.markdown("<p style='font-size:13px; color:#555;'>依據後台蒙地卡羅模組（含發電氣候變異、颱風毀損機率、MMRA 變流器汰換提撥與 DSCR 償債覆蓋率計算）：</p>", unsafe_allow_html=True)
         
-        # 確保內部函式獨立可用，避免 NameError
+        # 安全宣告內部精算函式，並全面使用 getattr 防止 Config 屬性缺失報錯
         if 'annuity' not in globals():
             def annuity(P, r, n):
                 return P * r / (1 - (1 + r) ** -n)
@@ -925,28 +925,50 @@ elif page == "相關研究成果":
         if 'simulate_developer' not in globals():
             def simulate_developer(cfg, n, seed, rate, admin=0.0, issue_cost=0.0):
                 rng = np.random.default_rng(seed)
-                L, T = cfg.project_life, cfg.debt_tenor
-                cap, capex, debt = cfg.capacity_kw, cfg.capex_total, cfg.sto_raise
+                L = getattr(cfg, 'project_life', 20)
+                T = getattr(cfg, 'debt_tenor', 18)
+                capex = getattr(cfg, 'capex_total', 37500000)
+                debt = getattr(cfg, 'sto_raise', 30000000)
+                cap = getattr(cfg, 'capacity_kw', capex / 37400)
+                
                 yrs = np.arange(L)
                 clim = np.exp(rng.normal(-0.05 ** 2 / 2, 0.05, (n, L)))
                 typh = rng.random((n, L)) < 0.05
                 tloss = rng.uniform(0.02, 0.10, (n, L)) * typh
                 gen_factor = clim * (1 - tloss)
-                rev = cap * 1250 * (1 - 0.006) ** yrs * gen_factor * 3.5037
-                opex = 0.0329 * capex * (1.0) ** yrs + typh * 300_000
-                inv = 2000 * cap
-                opex[:, :12] += inv / 12
+                
+                spec_yield = getattr(cfg, 'specific_yield', 1250)
+                deg = getattr(cfg, 'degradation', 0.006)
+                fit_val = getattr(cfg, 'fit', 3.5037)
+                rev = cap * spec_yield * (1 - deg) ** yrs * gen_factor * fit_val
+                
+                om_ratio = getattr(cfg, 'om_ratio', 0.0329)
+                om_esc = getattr(cfg, 'om_escalation', 0.0)
+                opex = om_ratio * capex * (1 + om_esc) ** yrs + typh * 300_000
+                
+                inv_yr = getattr(cfg, 'inverter_year', 12)
+                inv_cost = getattr(cfg, 'inverter_cost_per_kw', 2000) * cap
+                mmra_flag = getattr(cfg, 'mmra', True)
+                if mmra_flag:
+                    opex[:, :inv_yr] += inv_cost / inv_yr
+                else:
+                    opex[:, inv_yr - 1] += inv_cost
+                    
                 cfads = rev - opex
                 pmt = annuity(debt, rate, T)
                 bal = np.zeros(L + 1); bal[0] = debt
                 for t in range(T):
                     bal[t + 1] = bal[t] * (1 + rate) - pmt
                 ds = np.where(yrs < T, pmt + admin * bal[:L], 0.0)
-                dsra_target = 6 / 12 * pmt
+                
+                dsra_months = getattr(cfg, 'dsra_months', 6)
+                dsra_target = dsra_months / 12 * pmt
                 dsra, trap = np.full(n, dsra_target), np.zeros(n)
                 default_year = np.full(n, np.nan)
                 alive = np.ones(n, bool)
                 dist = np.zeros((n, L))
+                cash_trap_dscr = getattr(cfg, 'cash_trap_dscr', 1.10)
+                
                 for t in range(L):
                     sur = cfads[:, t] - ds[t]
                     short = alive & (sur < 0)
@@ -961,11 +983,12 @@ elif page == "相關研究成果":
                     topup = np.where(pos, np.minimum(sur, np.maximum(tgt - dsra, 0)), 0)
                     dsra += topup
                     rest = np.where(pos, sur - topup, 0)
-                    lock = (cfads[:, t] / ds[t] < 1.10) if ds[t] > 0 else np.zeros(n, bool)
+                    lock = (cfads[:, t] / ds[t] < cash_trap_dscr) if ds[t] > 0 else np.zeros(n, bool)
                     trap += np.where(lock, rest, 0)
                     release = np.where(~lock & alive, trap, 0); trap -= release
                     dist[:, t] = np.where(alive, np.where(lock, 0, rest) + release, 0)
                     dist[:, -1] += np.where(alive, trap + dsra, 0)
+                    
                 equity0 = capex + dsra_target - debt * (1 - issue_cost)
                 eq_irr = irr_vec(np.c_[-np.full(n, equity0), dist])
                 dscr = cfads[:, :T] / ds[:T]
@@ -1034,7 +1057,6 @@ elif page == "相關研究成果":
             </tr>
         </table>
         """, unsafe_allow_html=True)
-
     # ==========================================
     # 🔄 面向四：整體循環模式
     # ==========================================
