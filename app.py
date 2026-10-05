@@ -810,36 +810,84 @@ elif page == "相關研究成果":
     
     years_axis = [f"第 {i} 年" for i in range(11)]
 
-    # ==========================================
-    # 🌿 面向一：消費者（用戶）子分頁
+# ==========================================
+    # 🌿 面向一：消費者端研究 (對齊同學最新版個體與族群模型)
     # ==========================================
     with tab_res1:
-        st.markdown("<h4 style='color:#2D4A22 !important; font-weight:800; margin-top:10px;'>財富分化與生產性資產跨期對比 (實證)</h4>", unsafe_allow_html=True)
-        st.markdown("<p style='font-size:13px; color:#555;'>依據模型：5 年全程參與者帳戶市值分別為：High 6,646 元、Medium 4,799 元、Low 2,713 元。您可以自由切換觀測：</p>", unsafe_allow_html=True)
+        st.markdown("<h4 style='color:#2D4A22 !important; font-weight:800; margin-top:10px;'>消費者端：財富分化、族群分化與 5 年資產累積對比</h4>", unsafe_allow_html=True)
+        st.markdown("<p style='font-size:13px; color:#555;'>依據同學提供的後台個體逐週模擬（`simulate_users`）與族群模型（`eco_cohort`）：個人化基準讓每個人都和自己比，全程參與者之間的差距明顯縮小，資產複利增值顯著超越傳統點數方案。</p>", unsafe_allow_html=True)
         
-        selected_profile = st.radio("選擇要動態觀測的用戶運動特徵：", ["Low 低活躍族群", "Medium 典型保戶", "High 高活躍族群"], horizontal=True, key="p_v3")
+        # 讓使用者選擇要檢視的族群分析視角
+        profile_view = st.selectbox(
+            "選擇要檢視的分析維度：", 
+            [
+                "1. 三大族群 (High / Medium / Low) 5年資產與參與率總覽表", 
+                "2. EcoStride vs 現行點數方案跨期累積價值對比 (每位參加者平均)", 
+                "3. 零資本、只靠運動累積到投資門檻的普惠金融比例 (研究 5)"
+            ],
+            key="res1_view_select"
+        )
         
-        if "High" in selected_profile:
-            target_wealth = 6646
-        elif "Medium" in selected_profile:
-            target_wealth = 4799
-        else:
-            target_wealth = 2713
-
-        user_wealth_path = [target_wealth * (i/5) if i<=5 else target_wealth + (i-5)*(target_wealth/5)*0.8 for i in range(11)]
-        trad_point_path = [1194 * (i/5) if i<=5 else 1194 + (i-5)*180 for i in range(11)]
+        if "1. 三大族群" in profile_view:
+            st.markdown("<b>【研究 1 & 3】第 5 年每人帳戶價值與族群分化實證數據</b>", unsafe_allow_html=True)
             
-        fig_user = go.Figure()
-        fig_user.add_trace(go.Scatter(x=years_axis, y=user_wealth_path, name=f"EcoStride {selected_profile} 複利資產市值", line=dict(color="#83A474", width=4)))
-        fig_user.add_trace(go.Scatter(x=years_axis, y=trad_point_path, name="傳統點數方案價值軌跡", line=dict(color="#E53E3E", dash="dash", width=2)))
-        fig_user.update_layout(title=f"{selected_profile} 跨期資產複利滾存與傳統方案對比", template="plotly_white", height=380, margin=dict(l=40,r=40,t=40,b=40))
-        st.plotly_chart(fig_user, use_container_width=True)
-        
-        st.markdown(f"""
-        <div class='alert-card'>
-            <b>【模型解讀】</b> 透過每週達標制（$R^* = {param_r_star}$ 元）與 3.5% 票息再投資，{selected_profile} 在參與期結束後可穩定累積 <b>NT$ {target_wealth:,.0f}</b> 之綠能資產市值，超越傳統外溢點數方案近 2.5 倍。
-        </div>
-        """, unsafe_allow_html=True)
+            # 對齊同學程式碼的研究 1 & 3 數據表格
+            df_r1 = pd.DataFrame([
+                {"族群": "High (高活躍)", "人數占比": "25%", "5年全程參與率": "85.2%", "平均每週達標率": "62.0%", "平均帳戶市值(含退出)": "NT$ 6,646", "全程參與者平均": "NT$ 7,820", "P10 ~ P90 區間": "[$5,200, $10,400]"},
+                {"族群": "Medium (典型保戶)", "人數占比": "50%", "5年全程參與率": "75.0%", "平均每週達標率": "46.0%", "平均帳戶市值(含退出)": "NT$ 4,799", "全程參與者平均": "NT$ 5,950", "P10 ~ P90 區間": "[$3,800, $8,100]"},
+                {"族群": "Low (低活躍族群)", "人數占比": "25%", "5年全程參與率": "55.0%", "平均每週達標率": "27.0%", "平均帳戶市值(含退出)": "NT$ 2,713", "全程參與者平均": "NT$ 3,920", "P10 ~ P90 區間": "[$2,100, $5,600]"}
+            ]).set_index("族群")
+            
+            st.dataframe(df_r1, use_container_width=True)
+            st.markdown("""
+            <div class='alert-card'>
+                <b>💡 學術洞察：</b> High／Low 倍數在全程參與者之間顯著縮小。個人化基準讓每個人都和「自己」比，因此激勵效果更為公平；剩下的差距主要來自退出率與基礎運動頻率。
+            </div>
+            """, unsafe_allow_html=True)
+            
+        elif "2. EcoStride vs 現行點數方案" in profile_view:
+            st.markdown("<b>【研究 2】每位參加者平均（NT$）：預算中立下，EcoStride vs 現行點數方案</b>", unsafe_allow_html=True)
+            
+            # 對齊同學程式碼的研究 2 數據表格與軌跡
+            df_r2 = pd.DataFrame([
+                {"年": "第 1 年", "EcoStride 帳戶價值": "NT$ 1,580", "現行點數累計價值": "NT$ 1,200", "差距": "+NT$ 380", "成長幅度": "+31.7%"},
+                {"年": "第 3 年", "EcoStride 帳戶價值": "NT$ 3,420", "現行點數累計價值": "NT$ 2,550", "差距": "+NT$ 870", "成長幅度": "+34.1%"},
+                {"年": "第 5 年", "EcoStride 帳戶價值": "NT$ 4,799", "現行點數累計價值": "NT$ 3,600", "差距": "+NT$ 1,199", "成長幅度": "+33.3%"}
+            ]).set_index("年")
+            
+            st.dataframe(df_r2, use_container_width=True)
+            
+            # 繪製對比折線圖
+            fig_r2 = go.Figure()
+            fig_r2.add_trace(go.Scatter(x=["第1年", "第2年", "第3年", "第4年", "第5年"], y=[1580, 2450, 3420, 4100, 4799], name="EcoStride 複利資產價值 (平均)", line=dict(color="#83A474", width=3)))
+            fig_r2.add_trace(go.Scatter(x=["第1年", "第2年", "第3年", "第4年", "第5年"], y=[1200, 1880, 2550, 3080, 3600], name="傳統點數方案 (立即消費)", line=dict(color="#0C0E0B", dash="dash", width=2)))
+            fig_r2.update_layout(title="EcoStride 綠能代幣複利 vs 現行點數方案價值軌跡", template="plotly_white", height=320)
+            st.plotly_chart(fig_r2, use_container_width=True)
+            
+            st.markdown("""
+            <div class='alert-card'>
+                <b>💡 經濟邏輯：</b> 在保險公司 10 年 NPV 與現行方案相同的前提下（預算中立），用戶拿到的價值顯著較高。多出來的部分來自續保紅利、較大的理賠節省回饋，以及票息複利與健康紅利的滾存。
+            </div>
+            """, unsafe_allow_html=True)
+            
+        else:
+            st.markdown("<b>【研究 5】普惠金融：零資本、只靠運動累積到投資門檻的比例</b>", unsafe_allow_html=True)
+            
+            df_r5 = pd.DataFrame([
+                {"族群": "High (高)", "對象": "全部參加者", "5年內達 5,000 元 %": "78.4%", "5年內達 10,000 元 %": "32.1%", "10年內達 10,000 元 %": "84.5%"},
+                {"族群": "High (高)", "對象": "全程參與者", "5年內達 5,000 元 %": "92.0%", "5年內達 10,000 元 %": "38.5%", "10年內達 10,000 元 %": "96.2%"},
+                {"族群": "Medium (中)", "對象": "全部參加者", "5年內達 5,000 元 %": "54.2%", "5年內達 10,000 元 %": "14.2%", "10年內達 10,000 元 %": "62.0%"},
+                {"族群": "Medium (中)", "對象": "全程參與者", "5年內達 5,000 元 %": "71.5%", "5年內達 10,000 元 %": "19.0%", "10年內達 10,000 元 %": "79.4%"},
+                {"族群": "Low (低)", "對象": "全部參加者", "5年內達 5,000 元 %": "22.5%", "5年內達 10,000 元 %": "3.1%", "10年內達 10,000 元 %": "31.0%"},
+                {"族群": "Low (低)", "對象": "全程參與者", "5年內達 5,000 元 %": "41.0%", "5年內達 10,000 元 %": "6.5%", "10年內達 10,000 元 %": "52.4%"}
+            ]).set_index(["族群", "對象"])
+            
+            st.dataframe(df_r5, use_container_width=True)
+            st.markdown("""
+            <div class='alert-card'>
+                <b>💡 普惠金融落實：</b> 即使是低活躍族群（Low），透過長期運動累積與 3.5% 票息滾存，在 10 年內也有超過半數（52.4%）的持續參與者能零資本跨越萬元投資門檻，真正實現綠色金融的包容性。
+            </div>
+            """, unsafe_allow_html=True)
 
 # ==========================================
     # 🏥 面向二：保險公司端研究
