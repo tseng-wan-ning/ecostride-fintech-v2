@@ -622,9 +622,9 @@ elif page == "提案動機與模式介紹":
         """, unsafe_allow_html=True)
 
 # ==========================================
-# 6. 分頁三：APP 介面展示 (新增 AI 智能客服圖形版)
+# 6. 分頁三：APP 介面展示 (獨立路由防護版)
 # ==========================================
-elif page == "APP 介面展示":
+if page == "APP 介面展示":
     current_r_star = globals().get('R_STAR', 30.5)
     wpy_val = globals().get('WPY', 52)
 
@@ -637,7 +637,7 @@ elif page == "APP 介面展示":
     with col_ui_left:
         st.markdown("<div style='background-color:#FFFFFF; border:1px solid #B7CEAD; padding:20px; border-radius:14px;'>", unsafe_allow_html=True)
         st.markdown("<h4 style='color:#0C0E0B !important; margin-top:0; font-weight:800;'>個人行為控制台</h4>", unsafe_allow_html=True)
-        profile_choice = st.radio("運動族群預設切換：", ["高活躍型 (High)", "典型保戶 (Medium)", "Low 低活躍型"])
+        profile_choice = st.radio("運動族群預設切換：", ["高活躍型 (High)", "典型保戶 (Medium)", "Low 低活躍型"], key="app_profile_radio")
         
         if "高活躍" in profile_choice:
             init_steps, init_cons, sel_g = 8700, 0.95, 0
@@ -646,11 +646,11 @@ elif page == "APP 介面展示":
         else:
             init_steps, init_cons, sel_g = 4300, 0.40, 2
             
-        ui_steps = st.slider("設定您的每日平均步數：", 3000, 15000, init_steps, 500)
-        ui_cons = st.slider("設定行為持續性因子 (Consistency)：", 0.1, 1.0, init_cons, 0.05)
+        ui_steps = st.slider("設定您的每日平均步數：", 3000, 15000, init_steps, 500, key="app_steps_slider")
+        ui_cons = st.slider("設定行為持續性因子 (Consistency)：", 0.1, 1.0, init_cons, 0.05, key="app_cons_slider")
         
         st.markdown("<br>", unsafe_allow_html=True)
-        app_tab_view = st.radio("手機 APP 檢視頁籤：", ["① 每日運動與獎勵", "② RWA 綠能資產錢包", "③ 保單風險與分紅"])
+        app_tab_view = st.radio("手機 APP 檢視頁籤：", ["① 每日運動與獎勵", "② RWA 綠能資產錢包", "③ 保單風險與分紅"], key="app_tab_radio")
         st.markdown("</div>", unsafe_allow_html=True)
         
     # 計算即時模擬數值
@@ -741,7 +741,6 @@ elif page == "APP 介面展示":
                     </div>
                 </div>
 
-                <!-- AI 智能客服小卡 -->
                 <div style="background:#EBF3EA; border:1px solid #83A474; padding:10px; border-radius:12px; display:flex; align-items:center; gap:8px;">
                     <div style="font-size:22px;">🤖</div>
                     <div style="font-size:9px; color:#2D4A22; line-height:1.4;">
