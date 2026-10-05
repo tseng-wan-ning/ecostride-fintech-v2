@@ -622,117 +622,134 @@ elif page == "提案動機與模式介紹":
         """, unsafe_allow_html=True)
 
 # ==========================================
-# 6. 分頁三：APP 介面展示
+# 6. 分頁三：APP 介面展示 (深度整合最新版後台模擬)
 # ==========================================
 elif page == "APP 介面展示":
     st.markdown("<h2 style='color:#0C0E0B !important; font-size:32px; font-weight:800;'>📱 APP 核心介面互動模擬</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='font-size:14px; color:#0C0E0B; opacity:0.8; font-weight:500;'>請嘗試在左側控制台調整您的每日健走行為，右側虛擬手機內的金融數據與清算面板將會即時同步跳動。</p>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size:14px; color:#0C0E0B; opacity:0.8; font-weight:500;'>請嘗試在左側控制台調整您的每日健走行為與持續性因子，右側虛擬手機與聯立資產面板將會即時同步跳動。</p>", unsafe_allow_html=True)
     st.markdown("---")
     
-    col_ui_left, col_ui_right = st.columns([1, 2.5])
+    col_ui_left, col_ui_right = st.columns([1, 2.3])
     
     with col_ui_left:
         st.markdown("<div style='background-color:#FFFFFF; border:1px solid #B7CEAD; padding:24px; border-radius:14px;'>", unsafe_allow_html=True)
         st.markdown("<h4 style='color:#0C0E0B !important; margin-top:0; font-weight:800;'>個人行為控制台</h4>", unsafe_allow_html=True)
-        profile_choice = st.radio("運動族群預設切換：", ["高活躍型 (High)", "典型保戶 (Medium)", "低活躍型 (Low)"])
+        profile_choice = st.radio("運動族群預設切換：", ["高活躍型 (High)", "典型保戶 (Medium)", "Low 低活躍型"])
         
-        if profile_choice == "高活躍型 (High)":
-            init_steps, init_cons, sim_steps_inc = 8700, 1.0, 0.30
-        elif profile_choice == "典型保戶 (Medium)":
-            init_steps, init_cons, sim_steps_inc = 6300, 0.7, 0.20
+        if "高活躍" in profile_choice:
+            init_steps, init_cons, sel_g = 8700, 0.95, 0
+        elif "典型保戶" in profile_choice:
+            init_steps, init_cons, sel_g = 6300, 0.75, 1
         else:
-            init_steps, init_cons, sim_steps_inc = 4300, 0.3, 0.05
+            init_steps, init_cons, sel_g = 4300, 0.40, 2
             
-        ui_steps = st.slider("設定您的每日平均步數：", 0, 20000, init_steps, 500)
-        ui_cons = st.slider("設定您的行為持續性因子 (Consistency)：", 0.1, 1.0, init_cons, 0.1)
+        ui_steps = st.slider("設定您的每日平均步數：", 3000, 15000, init_steps, 500)
+        ui_cons = st.slider("設定您的行為持續性因子 (Consistency)：", 0.1, 1.0, init_cons, 0.05)
+        
+        st.markdown("<br>", unsafe_allow_html=True)
+        app_tab_view = st.radio("手機 APP 檢視頁籤：", ["① 每日運動與獎勵看板", "② RWA 綠能資產錢包", "③ 保單風險與分紅狀態"], horizontal=True)
         st.markdown("</div>", unsafe_allow_html=True)
         
-    excess = max(0, ui_steps - 5000)
-    calc_eco = calculate_compounding_rwa_wealth(excess, consistency=ui_cons)
-    total_daily_val = (R_STAR_DEFAULT / 7) * ui_cons
+    # 透過同學的後台邏輯即時運算當前設定下的預期回饋與資產複利
+    # 根據步數高於基準 (目標 + 1500) 計算每週達標機率
+    base_target_steps = CFG.base_steps[sel_g] + CFG.goal_extra
+    step_diff = ui_steps - CFG.base_steps[sel_g]
+    ach_prob_est = min(0.95, max(0.05, (step_diff / CFG.goal_extra) * CFG.p_ach_gain[sel_g] * ui_cons))
+    weekly_expected_reward = ach_prob_est * R_STAR
+    
+    # 模擬 5 年期累積複利資產 (使用 CFG.r_user 淨收益率)
+    r_w_weekly = CFG.r_user / WPY
+    accumulated_rwa_val = 0.0
+    for w_i in range(5 * WPY):
+        w_pay = weekly_expected_reward if (w_i % WPY < 45) else weekly_expected_reward * 0.8
+        accumulated_rwa_val = accumulated_rwa_val * (1 + r_w_weekly) + w_pay
 
     with col_ui_right:
-        col_m1, col_m2, col_m3 = st.columns(3)
+        st.markdown(f"""
+            <div style="display: flex; justify-content: center;">
+                <div class="phone-container" style="width: 380px;">
+                    <div style="font-size:10px; color:#FFFFFF; display:flex; justify-content:space-between; margin-bottom:8px; font-family:monospace; padding: 0 5px;">
+                        <span>09:41</span> <span>EcoStride OS v2.6</span> <span style="float:right;">LTE 100%</span>
+                    </div>
+                    <div class="phone-screen">
+        """, unsafe_allow_html=True)
         
-        with col_m1:
+        if "①" in app_tab_view:
             st.markdown(f"""
-                <div class="phone-container">
-                    <div style="font-size:10px; color:#FFFFFF; text-align:space-between; margin-bottom:10px; font-family:monospace; padding: 0 5px;">
-                        <span>09:41</span> <span style="float:right;">LTE 100%</span>
+                <p style="font-size:10px; font-weight:800; color:#83A474; text-align:center; letter-spacing:1px;">DAILY HEALTH DASHBOARD</p>
+                <div style="text-align:center; margin: 15px 0;">
+                    <span style="font-size:36px; font-weight:900; color:#0C0E0B;">{ui_steps:,}</span>
+                    <p style="font-size:11px; color:#0C0E0B; margin:0; font-weight:600; opacity:0.6;">TODAY'S AVERAGE STEPS</p>
+                </div>
+                <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                    <div style="flex:1; background:#F5F7F4; padding:10px; border-radius:10px; text-align:center; border:1px solid #B7CEAD;">
+                        <span style="font-size:10px; color:#666;">預估週達標率</span>
+                        <p style="font-size:16px; font-weight:800; color:#2D4A22; margin:2px 0;">{ach_prob_est*100:.1f}%</p>
                     </div>
-                    <div class="phone-screen">
-                        <p style="font-size:11px; font-weight:800; color:#83A474; text-align:center; tracking-widest; letter-spacing:0.5px;">ECOSTRIDE DASHBOARD</p>
-                        <br>
-                        <div style="text-align:center;">
-                            <span style="font-size:38px; font-weight:900; color:#0C0E0B;">{ui_steps:,}</span>
-                            <p style="font-size:11px; color:#0C0E0B; margin:0 0 8px 0; font-weight:600; opacity:0.6;">STEPS TODAY</p>
-                            <div style="font-size:28px; margin-bottom:5px;">👣</div>
-                        </div>
-                        <br>
-                        <div style="background-color:#F5F7F4; border:1px solid #B7CEAD; padding:15px; border-radius:14px; text-align:center;">
-                            <span style="font-size:11px; color:#0C0E0B; font-weight:700;">每週回饋折算日均</span>
-                            <p style="font-size:24px; font-weight:900; color:#83A474; margin:5px 0;">NT$ {total_daily_val:.2f}</p>
-                        </div>
-                        <p style="font-size:10px; color:#0C0E0B; opacity:0.5; text-align:center; margin-top:55px; line-height:1.5;">
-                            數據已透過零知識證明 (ZKP) 隱私保護技術完成安全驗證。
-                        </p>
+                    <div style="flex:1; background:#F5F7F4; padding:10px; border-radius:10px; text-align:center; border:1px solid #B7CEAD;">
+                        <span style="font-size:10px; color:#666;">連續 4 週加成</span>
+                        <p style="font-size:16px; font-weight:800; color:#83A474; margin:2px 0;">+{CFG.streak_bonus*100:.0f}%</p>
                     </div>
                 </div>
-                """, unsafe_allow_html=True)
-            st.markdown("<p style='text-align:center; font-size:13px; font-weight:700; color:#0C0E0B; margin-top:10px;'>畫面 A：健康看板與資本生成</p>", unsafe_allow_html=True)
-
-        with col_m2:
+                <div style="background-color:#83A474; padding:14px; border-radius:12px; color:#F5F7F4; text-align:center;">
+                    <span style="font-size:11px; opacity:0.9; font-weight:600;">本週預期獲發回饋金 (R*)</span>
+                    <p style="font-size:22px; font-weight:900; margin:4px 0;">NT$ {weekly_expected_reward:.1f} / 週</p>
+                </div>
+                <p style="font-size:10px; color:#0C0E0B; opacity:0.5; text-align:center; margin-top:35px; line-height:1.4;">
+                    🔒 通過零知識證明 (ZKP) 隱私保護，自動同步 Apple Health / Google Fit 步數。
+                </p>
+            """, unsafe_allow_html=True)
+            
+        elif "②" in app_tab_view:
             st.markdown(f"""
-                <div class="phone-container">
-                    <div style="font-size:10px; color:#FFFFFF; text-align:space-between; margin-bottom:10px; font-family:monospace; padding: 0 5px;">
-                        <span>09:41</span> <span style="float:right;">LTE 100%</span>
-                    </div>
-                    <div class="phone-screen">
-                        <p style="font-size:11px; font-weight:800; color:#83A474; text-align:center; tracking-widest; letter-spacing:0.5px;">ACTUARIAL PANEL</p>
-                        <br>
-                        <p style="font-size:11px; color:#0C0E0B; opacity:0.6; margin:0; font-weight:600;">行為穩定度因子</p>
-                        <p style="font-size:18px; font-weight:800; color:#0C0E0B; margin:5px 0;">{ui_cons} ({profile_choice.split(" ")[0]})</p>
-                        <br>
-                        <div style="background-color:#83A474; padding:18px; border-radius:14px; color:#F5F7F4; text-align:center;">
-                            <span style="font-size:10px; opacity:0.9; font-weight:600;">大盤預期理賠損失率</span>
-                            <p style="font-size:26px; font-weight:900; margin:5px 0;">74.2%</p>
-                        </div>
-                        <br>
-                        <div style="font-size:11px; color:#0C0E0B; line-height:1.7; background-color:#F5F7F4; padding:12px; border-radius:10px; border:1px solid #B7CEAD;">
-                            <b>大盤護城河邊際：</b><br>
-                            • 預算中立回饋: R*=30.5元/週<br>
-                            • 基準初始損失率: 75%
-                        </div>
+                <p style="font-size:10px; font-weight:800; color:#83A474; text-align:center; letter-spacing:1px;">RWA GREEN PORTFOLIO</p>
+                <div style="background-color:#FFFFFF; border:1px solid #B7CEAD; padding:14px; border-radius:12px; text-align:center; margin: 15px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
+                    <span style="font-size:11px; color:#0C0E0B; font-weight:600; opacity:0.7;">5年累積 STRIDE 綠能資產市值</span>
+                    <p style="font-size:26px; font-weight:900; color:#83A474; margin:4px 0;">NT$ {accumulated_rwa_val:,.0f}</p>
+                </div>
+                <div style="font-size:11px; background-color:#F5F7F4; padding:12px; border-radius:10px; border:1px solid #B7CEAD; line-height:1.6;">
+                    <b>底層真實資產 (STO)：</b><br>
+                    • 標的：國泰證券「陽光綠益」太陽能案場<br>
+                    • 基礎固定票息：{CFG.coupon*100:.1f}%<br>
+                    • 用戶淨報酬率：{CFG.r_user*100:.2f}% (享 10% 票息分潤)<br>
+                    • 流動性機制：自動化微型資產流動性池
+                </div>
+            """, unsafe_allow_html=True)
+            
+        else:
+            st.markdown(f"""
+                <p style="font-size:10px; font-weight:800; color:#83A474; text-align:center; letter-spacing:1px;">POLICY & RISK STATUS</p>
+                <div style="margin: 15px 0; background:#F5F7F4; padding:12px; border-radius:10px; border:1px solid #B7CEAD;">
+                    <span style="font-size:11px; color:#666;">保單年度與狀態</span>
+                    <p style="font-size:15px; font-weight:800; color:#2D4A22; margin:2px 0;">第 3 年度 (在籍有效)</p>
+                </div>
+                <div style="background-color:#2D4A22; padding:12px; border-radius:10px; color:#F5F7F4; text-align:center;">
+                    <span style="font-size:10px; opacity:0.9; font-weight:600;">大盤預期理賠損失率最佳化</span>
+                    <p style="font-size:20px; font-weight:900; margin:3px 0;">74.2% (▼ 0.8%)</p>
+                </div>
+                <p style="font-size:10px; color:#0C0E0B; opacity:0.6; margin-top:20px; line-height:1.5;">
+                    💡 <b>合規保障：</b>未滿 2 年解約者帳戶歸回保險準備金，滿 2 年後資產全額歸屬用戶。
+                </p>
+            """, unsafe_allow_html=True)
+
+        st.markdown("""
                     </div>
                 </div>
-                """, unsafe_allow_html=True)
-            st.markdown("<p style='text-align:center; font-size:13px; font-weight:700; color:#0C0E0B; margin-top:10px;'>畫面 B：風險精算與大盤損失率</p>", unsafe_allow_html=True)
+            </div>
+        """, unsafe_allow_html=True)
 
-        with col_m3:
-            st.markdown(f"""
-                <div class="phone-container">
-                    <div style="font-size:10px; color:#FFFFFF; text-align:space-between; margin-bottom:10px; font-family:monospace; padding: 0 5px;">
-                        <span>09:41</span> <span style="float:right;">LTE 100%</span>
-                    </div>
-                    <div class="phone-screen">
-                        <p style="font-size:11px; font-weight:800; color:#83A474; text-align:center; tracking-widest; letter-spacing:0.5px;">RWA GREEN PORTFOLIO</p>
-                        <br>
-                        <div style="background-color:#FFFFFF; border:1px solid #B7CEAD; padding:15px; border-radius:14px; text-align:center; box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
-                            <span style="font-size:11px; color:#0C0E0B; font-weight:600; opacity:0.7;">10年累積 STRIDE 市值</span>
-                            <p style="font-size:24px; font-weight:900; color:#83A474; margin:5px 0;">NT$ {calc_eco:,.0f}</p>
-                        </div>
-                        <br>
-                        <div style="font-size:11px; background-color:#F5F7F4; padding:12px; border-radius:10px; border:1px solid #B7CEAD; line-height:1.6;">
-                            <b>錨定底層資產：</b><br>
-                            國泰證券 — 陽光綠益太陽能案場<br>
-                            • STO 基礎票息: 3.5%<br>
-                            • 跨期資產利得成長: 5.0%
-                        </div>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-            st.markdown("<p style='text-align:center; font-size:13px; font-weight:700; color:#0C0E0B; margin-top:10px;'>畫面 C：實體資產與財富面板</p>", unsafe_allow_html=True)
-
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # 附加動態趨勢預測圖
+    fig_app_trend = go.Figure()
+    yrs_arr = list(range(1, 6))
+    simulated_path = [accumulated_rwa_val * (y/5) * (1.1 if y>1 else 1.0) for y in yrs_arr]
+    legacy_path_app = [1194 * y for y in yrs_arr]
+    
+    fig_app_trend.add_trace(go.Scatter(x=yrs_arr, y=simulated_path, name="EcoStride APP 用戶累積資產", line=dict(color="#83A474", width=3)))
+    fig_app_trend.add_trace(go.Scatter(x=yrs_arr, y=legacy_path_app, name="傳統外溢點數方案 (立即消耗)", line=dict(color="#E53E3E", width=2, dash="dash")))
+    fig_app_trend.update_layout(title="【互動展示】使用者動態行為對應之 5 年資產成長預測", template="plotly_white", height=300, margin=dict(l=30, r=30, t=30, b=30))
+    st.plotly_chart(fig_app_trend, use_container_width=True)
 # ==========================================
 # 7. 🎯 分頁四：相關研究成果
 # ==========================================
