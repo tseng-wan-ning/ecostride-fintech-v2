@@ -738,7 +738,7 @@ elif page == "APP 介面展示":
 # ==========================================
 elif page == "相關研究成果":
     st.markdown("<h2 style='color:#2D4A22 !important; font-size:32px; font-weight:800;'>相關研究成果 ── 彭博精算終端動態沙盤 (v3)</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='font-size:14px; color:#0C0E0B; opacity:0.8; font-weight:500;'>本組成果已深度嵌入後台 Python 精算核心 (v3)。調整左方邊界條件後，各項財務指標與保險公司不輸機率將完全依照同學的蒙地卡羅矩陣即時連動重算。</p>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size:14px; color:#0C0E0B; opacity:0.8; font-weight:500;'>調整左方邊界條件後，各項財務指標與保險公司不輸機率將完全依照同學的蒙地卡羅矩陣即時連動重算。</p>", unsafe_allow_html=True)
     st.markdown("---")
 
     col_res_left, col_res_right = st.columns([1.1, 3])
