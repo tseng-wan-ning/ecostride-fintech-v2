@@ -902,12 +902,6 @@ elif page == "相關研究成果":
                 </div>
             </div>
             """, unsafe_allow_html=True)
-        
-        st.markdown("""
-        <div style="font-size: 13.5px; line-height: 1.7; color: #0C0E0B; margin-top: 20px; background-color: #FFFFFF; padding: 16px; border-radius: 10px; border: 1px solid #B7CEAD;">
-            <b>💡 v3 邊界機制與紅綠二分說明：</b> 本互動沙盤完全依照同學 v3 報告之計量模型建構。當動態共贏勝率小於 50% 時，儀表板會嚴格轉為紅色示警，展現出若補貼過高或氣候過於極端時系統將面臨的財務挑戰；當參數回到最佳化區間時則恢復綠色共贏。
-        </div>
-        """, unsafe_allow_html=True)
 # ==========================================
 # 加分項：代碼與公式互鎖
 # ==========================================
