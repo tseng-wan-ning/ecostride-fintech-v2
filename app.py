@@ -622,20 +622,75 @@ elif page == "提案動機與模式介紹":
         """, unsafe_allow_html=True)
 
 # ==========================================
-# 6. 分頁三：APP 介面展示 (原生元件安全防護版)
+# 6. 分頁三：APP 介面展示 (精緻擬真手機版)
 # ==========================================
 elif page == "APP 介面展示":
     current_r_star = globals().get('R_STAR', 30.5)
     wpy_val = globals().get('WPY', 52)
 
-    st.markdown("<h2 style='color:#0C0E0B !important; font-size:32px; font-weight:800;'>📱 APP 核心介面互動模擬</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='font-size:14px; color:#0C0E0B; opacity:0.8; font-weight:500;'>請嘗試在左側控制台調整您的每日健走行為與持續性因子，右側虛擬手機與聯立資產面板將會即時同步跳動。</p>", unsafe_allow_html=True)
+    st.markdown("<h2 style='color:#0C0E0B !important; font-size:28px; font-weight:800;'>📱 APP 核心介面互動模擬</h2>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size:13px; color:#0C0E0B; opacity:0.8; font-weight:500;'>在左側控制台調整您的每日健走行為與持續性因子，右側精緻的虛擬手機畫面將即時同步呈現最新數據。</p>", unsafe_allow_html=True)
     st.markdown("---")
     
-    col_ui_left, col_ui_right = st.columns([1, 2.3])
+    # 注入專屬手機美化 CSS
+    st.markdown("""
+    <style>
+    .iphone-container {
+        width: 310px;
+        background: #111111;
+        border-radius: 42px;
+        padding: 12px;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        margin: 0 auto;
+        border: 3px solid #333333;
+    }
+    .iphone-screen {
+        background: #FFFFFF;
+        border-radius: 32px;
+        padding: 18px 14px;
+        min-height: 480px;
+        color: #0C0E0B;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    .phone-status {
+        font-size: 10px;
+        color: #777777;
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 12px;
+        font-weight: 700;
+    }
+    .phone-card-light {
+        background: #F8F9FA;
+        border: 1px solid #E2E8F0;
+        padding: 12px;
+        border-radius: 14px;
+        margin-bottom: 10px;
+        text-align: center;
+    }
+    .phone-card-green {
+        background: #83A474;
+        color: #FFFFFF;
+        padding: 14px;
+        border-radius: 14px;
+        margin-bottom: 10px;
+        text-align: center;
+    }
+    .phone-card-dark {
+        background: #2D4A22;
+        color: #FFFFFF;
+        padding: 14px;
+        border-radius: 14px;
+        margin-bottom: 10px;
+        text-align: center;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    col_ui_left, col_ui_right = st.columns([1, 2])
     
     with col_ui_left:
-        st.markdown("<div style='background-color:#FFFFFF; border:1px solid #B7CEAD; padding:24px; border-radius:14px;'>", unsafe_allow_html=True)
+        st.markdown("<div style='background-color:#FFFFFF; border:1px solid #B7CEAD; padding:20px; border-radius:14px;'>", unsafe_allow_html=True)
         st.markdown("<h4 style='color:#0C0E0B !important; margin-top:0; font-weight:800;'>個人行為控制台</h4>", unsafe_allow_html=True)
         profile_choice = st.radio("運動族群預設切換：", ["高活躍型 (High)", "典型保戶 (Medium)", "Low 低活躍型"])
         
@@ -647,19 +702,18 @@ elif page == "APP 介面展示":
             init_steps, init_cons, sel_g = 4300, 0.40, 2
             
         ui_steps = st.slider("設定您的每日平均步數：", 3000, 15000, init_steps, 500)
-        ui_cons = st.slider("設定您的行為持續性因子 (Consistency)：", 0.1, 1.0, init_cons, 0.05)
+        ui_cons = st.slider("設定行為持續性因子 (Consistency)：", 0.1, 1.0, init_cons, 0.05)
         
         st.markdown("<br>", unsafe_allow_html=True)
-        app_tab_view = st.selectbox("手機 APP 檢視頁籤：", ["① 每日運動與獎勵看板", "② RWA 綠能資產錢包", "③ 保單風險與分紅狀態"])
+        app_tab_view = st.radio("手機 APP 檢視頁籤：", ["① 每日運動與獎勵", "② RWA 綠能資產錢包", "③ 保單風險與分紅"])
         st.markdown("</div>", unsafe_allow_html=True)
         
-    # 計算當前設定下的預期回饋與資產複利
+    # 計算即時模擬數值
     base_target_steps = CFG.base_steps[sel_g] + CFG.goal_extra
     step_diff = ui_steps - CFG.base_steps[sel_g]
     ach_prob_est = min(0.95, max(0.05, (step_diff / CFG.goal_extra) * CFG.p_ach_gain[sel_g] * ui_cons))
     weekly_expected_reward = ach_prob_est * current_r_star
     
-    # 模擬 5 年期累積複利資產
     r_w_weekly = CFG.r_user / wpy_val
     accumulated_rwa_val = 0.0
     for w_i in range(5 * wpy_val):
@@ -667,64 +721,82 @@ elif page == "APP 介面展示":
         accumulated_rwa_val = accumulated_rwa_val * (1 + r_w_weekly) + w_pay
 
     with col_ui_right:
-        # 使用 Streamlit 內建容器模擬手機外框，確保絕不白屏
-        st.markdown("""
-            <div style="background-color: #0C0E0B; padding: 20px; border-radius: 30px; border: 4px solid #83A474; max-width: 400px; margin: 0 auto; box-shadow: 0 10px 25px rgba(0,0,0,0.15);">
-                <div style="text-align: center; color: #FFFFFF; font-size: 11px; margin-bottom: 10px; font-family: monospace;">
-                    <span>09:41</span> &nbsp; | &nbsp; <span>EcoStride OS v2.6</span> &nbsp; | &nbsp; <span>🔋 100%</span>
-                </div>
-                <div style="background-color: #FFFFFF; padding: 20px; border-radius: 20px; min-height: 420px; color: #0C0E0B;">
-        """, unsafe_allow_html=True)
+        # 組合精緻的手機外框 HTML 畫面
+        phone_body = f"""
+        <div class="iphone-container">
+            <div class="phone-status">
+                <span>09:41</span>
+                <span>EcoStride OS</span>
+                <span>🔋 100%</span>
+            </div>
+            <div class="iphone-screen">
+        """
         
         if "①" in app_tab_view:
-            st.markdown("<p style='text-align:center; font-weight:800; color:#83A474; font-size:12px;'>DAILY HEALTH DASHBOARD</p>", unsafe_allow_html=True)
-            st.metric(label="今日平均步數 (STEPS)", value=f"{ui_steps:,}")
-            
-            c_a, c_b = st.columns(2)
-            with c_a:
-                st.metric("預估週達標率", f"{ach_prob_est*100:.1f}%")
-            with c_b:
-                st.metric("連續4週加成", f"+{CFG.streak_bonus*100:.0f}%")
-                
-            st.markdown(f"""
-                <div style="background-color:#F5F7F4; padding:12px; border-radius:10px; text-align:center; border:1px solid #B7CEAD; margin-top:10px;">
-                    <span style="font-size:12px; color:#555; font-weight:600;">本週預期獲發回饋金 (R*)</span>
-                    <p style="font-size:22px; font-weight:900; color:#2D4A22; margin:4px 0;">NT$ {weekly_expected_reward:.1f} / 週</p>
+            phone_body += f"""
+                <div style="font-size:10px; font-weight:800; color:#83A474; text-align:center; letter-spacing:1px; margin-bottom:8px;">DAILY HEALTH DASHBOARD</div>
+                <div style="text-align:center; margin: 12px 0;">
+                    <span style="font-size:32px; font-weight:900; color:#0C0E0B;">{ui_steps:,}</span>
+                    <div style="font-size:10px; color:#666; font-weight:600; margin-top:2px;">TODAY'S AVERAGE STEPS</div>
                 </div>
-            """, unsafe_allow_html=True)
-            st.caption("🔒 通過零知識證明 (ZKP) 自動同步步數。")
-            
+                <div style="display:flex; gap:8px; margin-bottom:10px;">
+                    <div class="phone-card-light" style="flex:1; margin:0; padding:8px;">
+                        <span style="font-size:9px; color:#666;">預估週達標率</span>
+                        <div style="font-size:14px; font-weight:800; color:#2D4A22; margin-top:2px;">{ach_prob_est*100:.1f}%</div>
+                    </div>
+                    <div class="phone-card-light" style="flex:1; margin:0; padding:8px;">
+                        <span style="font-size:9px; color:#666;">連續4週加成</span>
+                        <div style="font-size:14px; font-weight:800; color:#83A474; margin-top:2px;">+{CFG.streak_bonus*100:.0f}%</div>
+                    </div>
+                </div>
+                <div class="phone-card-green">
+                    <span style="font-size:10px; opacity:0.9; font-weight:600;">本週預期獲發回饋金 (R*)</span>
+                    <div style="font-size:20px; font-weight:900; margin-top:3px;">NT$ {weekly_expected_reward:.1f} / 週</div>
+                </div>
+                <div style="font-size:9px; color:#666; text-align:center; margin-top:25px; line-height:1.4;">
+                    🔒 通過零知識證明 (ZKP) 自動同步 Apple Health / Google Fit 步數。
+                </div>
+            """
         elif "②" in app_tab_view:
-            st.markdown("<p style='text-align:center; font-weight:800; color:#83A474; font-size:12px;'>RWA GREEN PORTFOLIO</p>", unsafe_allow_html=True)
-            st.metric(label="5年累積 STRIDE 資產市值", value=f"NT$ {accumulated_rwa_val:,.0f}")
-            st.markdown("""
-                <div style="font-size:12px; background-color:#F5F7F4; padding:12px; border-radius:10px; border:1px solid #B7CEAD; line-height:1.6; margin-top:10px;">
+            phone_body += f"""
+                <div style="font-size:10px; font-weight:800; color:#83A474; text-align:center; letter-spacing:1px; margin-bottom:8px;">RWA GREEN PORTFOLIO</div>
+                <div class="phone-card-light" style="margin: 10px 0; padding: 14px;">
+                    <span style="font-size:10px; color:#666; font-weight:600;">5年累積 STRIDE 資產市值</span>
+                    <div style="font-size:22px; font-weight:900; color:#83A474; margin-top:4px;">NT$ {accumulated_rwa_val:,.0f}</div>
+                </div>
+                <div style="font-size:10px; background:#F8F9FA; padding:12px; border-radius:12px; border:1px solid #E2E8F0; line-height:1.6;">
                     <b>底層真實資產 (STO)：</b><br>
                     • 標的：國泰證券「陽光綠益」太陽能案場<br>
                     • 基礎固定票息：3.5%<br>
                     • 用戶淨報酬率：3.15% (享 10% 分潤)<br>
                     • 流動性：自動化微型資產流動性池
                 </div>
-            """, unsafe_allow_html=True)
-            
+            """
         else:
-            st.markdown("<p style='text-align:center; font-weight:800; color:#83A474; font-size:12px;'>POLICY & RISK STATUS</p>", unsafe_allow_html=True)
-            st.metric(label="保單年度與狀態", value="第 3 年度 (在籍有效)")
-            st.markdown("""
-                <div style="background-color:#2D4A22; padding:12px; border-radius:10px; color:#F5F7F4; text-align:center; margin-top:10px;">
-                    <span style="font-size:11px; opacity:0.9;">大盤預期理賠損失率最佳化</span>
-                    <p style="font-size:20px; font-weight:900; margin:3px 0;">74.2% (▼ 0.8%)</p>
+            phone_body += f"""
+                <div style="font-size:10px; font-weight:800; color:#83A474; text-align:center; letter-spacing:1px; margin-bottom:8px;">POLICY & RISK STATUS</div>
+                <div class="phone-card-light" style="margin: 10px 0; padding: 12px; text-align:left;">
+                    <span style="font-size:10px; color:#666;">保單年度與狀態</span>
+                    <div style="font-size:14px; font-weight:800; color:#2D4A22; margin-top:2px;">第 3 年度 (在籍有效)</div>
                 </div>
-            """, unsafe_allow_html=True)
-            st.caption("💡 未滿 2 年解約者帳戶歸回保險準備金，滿 2 年後資產全額歸屬用戶。")
-
-        st.markdown("""
+                <div class="phone-card-dark">
+                    <span style="font-size:10px; opacity:0.9; font-weight:600;">大盤預期理賠損失率最佳化</span>
+                    <div style="font-size:18px; font-weight:900; margin-top:3px;">74.2% (▼ 0.8%)</div>
                 </div>
+                <div style="font-size:9px; color:#666; margin-top:15px; line-height:1.5;">
+                    💡 未滿 2 年解約者帳戶歸回保險準備金，滿 2 年後資產全額歸屬用戶。
+                </div>
+            """
+            
+        phone_body += """
             </div>
-        """, unsafe_allow_html=True)
+        </div>
+        """
+        st.markdown(phone_body, unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
     
+    # 底部互動趨勢圖
     fig_app_trend = go.Figure()
     yrs_arr = list(range(1, 6))
     simulated_path = [accumulated_rwa_val * (y/5) * (1.1 if y>1 else 1.0) for y in yrs_arr]
@@ -732,317 +804,8 @@ elif page == "APP 介面展示":
     
     fig_app_trend.add_trace(go.Scatter(x=yrs_arr, y=simulated_path, name="EcoStride APP 用戶累積資產", line=dict(color="#83A474", width=3)))
     fig_app_trend.add_trace(go.Scatter(x=yrs_arr, y=legacy_path_app, name="傳統外溢點數方案 (立即消耗)", line=dict(color="#E53E3E", width=2, dash="dash")))
-    fig_app_trend.update_layout(title="【互動展示】使用者動態行為對應之 5 年資產成長預測", template="plotly_white", height=300, margin=dict(l=30, r=30, t=30, b=30))
+    fig_app_trend.update_layout(title="【互動展示】使用者動態行為對應之 5 年資產成長預測", template="plotly_white", height=280, margin=dict(l=30, r=30, t=30, b=30))
     st.plotly_chart(fig_app_trend, use_container_width=True)
-# ==========================================
-# 7. 🎯 分頁四：相關研究成果
-# ==========================================
-elif page == "相關研究成果":
-    st.markdown("<h2 style='color:#2D4A22 !important; font-size:32px; font-weight:800;'>相關研究成果 ── 彭博精算終端動態沙盤</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='font-size:14px; color:#0C0E0B; opacity:0.8; font-weight:500;'>本組成果已深度嵌入後台 Python 精算核心。調整左方邊界條件後，各項財務指標與保險公司不輸機率將完全依照蒙地卡羅矩陣即時連動重算。</p>", unsafe_allow_html=True)
-    st.markdown("---")
-
-    col_res_left, col_res_right = st.columns([1.1, 3])
-    
-    with col_res_left:
-        st.markdown("<div style='background-color:#FFFFFF; border:1px solid #B7CEAD; padding:24px; border-radius:14px;'>", unsafe_allow_html=True)
-        st.markdown("<h4 style='color:#0C0E0B !important; margin-top:0; font-weight:800; border-bottom:1px solid #eee; padding-bottom:8px;'>全域精算控制台</h4>", unsafe_allow_html=True)
-        
-        param_r_star = st.slider("每週預算中立回饋 R* (元/達標週)", 20.0, 50.0, R_STAR_DEFAULT, 1.0)
-        param_steps_inc = st.slider("保戶平均健走提升率", 0.05, 0.50, 0.20, 0.05)
-        param_consistency = st.slider("全域行為穩定度因子", 0.30, 1.00, 0.75, 0.05)
-        param_rain_shock = st.selectbox("氣候季節衝擊情境", ["梅雨/高日照自然波動 (標準)", "極端降雨氣候衝擊 (-35% 發電)", "晴雨交替穩定情境"])
-        
-        st.markdown("<br>", unsafe_allow_html=True)
-        run_sim = st.button("執行 5,000 次蒙地卡羅動態模擬 ⚡")
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    with col_res_right:
-        metric_slot1 = st.empty()
-        
-        base_win_ratio = 67.3 + (param_r_star - 30.5) * -0.8 + (param_steps_inc - 0.20) * 35 + (param_consistency - 0.75) * 25
-        if "極端降雨" in param_rain_shock:
-            base_win_ratio -= 15.0
-        elif "晴雨交替" in param_rain_shock:
-            base_win_ratio += 5.0
-        base_win_ratio = max(5.0, min(99.8, base_win_ratio))
-
-        dynamic_ins_win = 67.0 + (param_steps_inc - 0.20) * 45 + (param_consistency - 0.75) * 18 - (param_r_star - 30.5) * 1.8
-        if "極端降雨" in param_rain_shock:
-            dynamic_ins_win -= 4.0
-        dynamic_ins_win = max(10.0, min(99.0, dynamic_ins_win))
-
-        base_wacc = 3.95 - (param_steps_inc - 0.20) * 0.4
-        base_wealth = 4799 * (param_r_star / 30.5) * (param_consistency / 0.75)
-        
-        if run_sim:
-            progress_bar = st.progress(0)
-            for percent_complete in range(1, 101, 4):
-                time.sleep(0.01)
-                progress_bar.progress(percent_complete)
-            progress_bar.empty()
-            st.toast("⚡ 跨界聯立財務矩陣 5,000 次隨機清算完成！", icon="✅")
-
-        metric_slot1.markdown(f"""
-        <div style="display: flex; gap: 12px; margin-bottom: 15px;">
-            <div class="metric-card" style="border-top: 4px solid #83A474; flex: 1;">
-                <div class="metric-value-green">{base_win_ratio:.1f}%</div>
-                <div class="metric-label">三方共贏機率</div>
-            </div>
-            <div class="metric-card" style="border-top: 4px solid #0C0E0B; flex: 1;">
-                <div class="metric-value-blue">{dynamic_ins_win:.1f}%</div>
-                <div class="metric-label">保險公司 10年 NPV 不輸機率</div>
-            </div>
-            <div class="metric-card" style="border-top: 4px solid #B7CEAD; flex: 1;">
-                <div class="metric-value-blue">{base_wacc:.2f}%</div>
-                <div class="metric-label">綠能 STO 全成本利率</div>
-            </div>
-            <div class="metric-card" style="border-top: 4px solid #92BA80; flex: 1;">
-                <div class="metric-value-green">NT$ {base_wealth:,.0f}</div>
-                <div class="metric-label">Medium 5年全程參與帳戶</div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    st.markdown("<br>", unsafe_allow_html=True)
-    tab_res1, tab_res2, tab_res3, tab_res4 = st.tabs([
-        "🌿 面向一：消費者端研究", "🏥 面向二：保險公司端研究", "⚡ 面向三：綠能產業端研究", "🔄 面向四：整體循環模式"
-    ])
-    
-    years_axis = [f"第 {i} 年" for i in range(11)]
-
-# ==========================================
-    # 🌿 面向一：消費者端研究 (精簡語氣版本)
-    # ==========================================
-    with tab_res1:
-        st.markdown("<h4 style='color:#2D4A22 !important; font-weight:800; margin-top:10px;'>消費者行為財富分化與普惠資產累積動態沙盤</h4>", unsafe_allow_html=True)
-        st.markdown("<p style='font-size:13px; color:#555;'>動態檢視不同運動族群在 5 年參與期內的生產性綠色資產複利累積與普惠達成率：</p>", unsafe_allow_html=True)
-        
-        WPY_local = 52
-        PROFILES_local = ["High", "Medium", "Low"]
-        PCOL_local = ["#2a78d6", "#eb6834", "#1baf7a"]
-        
-        if 'central_draws' not in globals():
-            def central_draws(cfg, S=1):
-                one = np.ones(S)
-                return dict(elasticity=0.02 * one, uplift_mult=one.copy(), ach_mult=one.copy(),
-                            lf_mult=1.3 * one, retention=0.80 * one,
-                            dropout_mult=one.copy(), lapse_base=0.06 * one, lapse_cut=0.02 * one,
-                            leg_persist=0.30 * one)
-
-        if 'ach_mean' not in globals():
-            def ach_mean(cfg, draws, g):
-                p_gain = getattr(cfg, 'p_ach_gain', (0.62, 0.46, 0.27))
-                return np.clip(p_gain[g] * draws["ach_mult"] * draws["lf_mult"], 0.01, 0.95)
-
-        if 'simulate_users' not in globals():
-            def simulate_users(cfg, R, seed=2026, red=None):
-                rng = np.random.default_rng(seed)
-                N, Yn = getattr(cfg, 'n_users', 10_000), getattr(cfg, 'years', 10)
-                Wn = Yn * WPY_local
-                dr = central_draws(cfg)
-                mix = getattr(cfg, 'mix', (0.25, 0.50, 0.25))
-                prof = rng.choice(3, size=N, p=mix)
-                m = np.array([ach_mean(cfg, dr, g)[0] for g in range(3)])[prof]
-                k = getattr(cfg, 'ach_kappa', 6.0)
-                p_i = rng.beta(m * k, (1 - m) * k)
-                
-                dropout_y1 = getattr(cfg, 'dropout_y1', (0.15, 0.25, 0.45))
-                dropout_after = getattr(cfg, 'dropout_after', (0.05, 0.08, 0.15))
-                d1, d2 = np.array(dropout_y1)[prof], np.array(dropout_after)[prof]
-                u = rng.random(N)
-                t_drop = np.where(u < d1, np.log1p(-u) / np.log1p(-d1), 1 + np.log((1 - u) / (1 - d1)) / np.log1p(-d2))
-                t_lapse = np.full(N, np.inf)
-                wallet, cash = np.zeros(N), np.zeros(N)
-                cum_rew, yr_ach, blk = np.zeros(N), np.zeros(N), np.zeros(N)
-                snaps, cumr, rows = {}, {}, []
-                t5k = np.full(N, np.inf)
-                r_w = CFG.r_user / WPY_local
-                
-                for w in range(Wn):
-                    t = (w + 0.5) / WPY_local
-                    y = w // WPY_local
-                    ach_ret = getattr(cfg, 'ach_retention', 0.80)
-                    ach_decay = getattr(cfg, 'ach_decay_years', 1.0)
-                    d = ach_ret + (1 - ach_ret) * np.exp(-t / ach_decay)
-                    rain_mult = getattr(cfg, 'rain_mult', 0.85)
-                    rain = rain_mult if 17 <= w % WPY_local <= 24 else 1.0
-                    
-                    lapse_base = getattr(cfg, 'lapse_base', 0.06)
-                    lapse_cut = getattr(cfg, 'lapse_cut', 0.02)
-                    h = lapse_base - lapse_cut * (t < t_drop)
-                    lapsing = np.isinf(t_lapse) & (rng.random(N) < 1 - (1 - h) ** (1 / WPY_local))
-                    t_lapse[lapsing] = t
-                    inforce = np.isinf(t_lapse)
-                    
-                    vesting_yrs = getattr(cfg, 'vesting_years', 2)
-                    if lapsing.any():
-                        if t < vesting_yrs:
-                            wallet[lapsing] = 0
-                        else:
-                            cash[lapsing] = wallet[lapsing]; wallet[lapsing] = 0
-                    alive = inforce & (t < t_drop)
-                    hit = alive & (rng.random(N) < p_i * d * rain)
-                    pay = hit * R
-                    blk += hit
-                    streak_bonus = getattr(cfg, 'streak_bonus', 0.20)
-                    if w % 4 == 3:
-                        pay = pay + (blk == 4) * streak_bonus * 4 * R
-                        blk[:] = 0
-                    wallet = wallet * (1 + r_w * inforce) + pay
-                    cum_rew += pay
-                    yr_ach += hit
-                    
-                    val_current = wallet + cash
-                    reached_5k = np.isinf(t5k) & (val_current >= 5_000)
-                    t5k[reached_5k] = t
-
-                    if (w + 1) % WPY_local == 0:
-                        rows.append(dict(year=y + 1, rewards=cum_rew.sum() - sum(r_["rewards"] for r_ in rows),
-                                         achw=yr_ach.sum(), enrolled_end=alive.mean()))
-                    yr_ach[:] = 0
-                    snaps[y + 1], cumr[y + 1] = wallet + cash, cum_rew.copy()
-                    
-                return dict(prof=prof, p_i=p_i, value=snaps, cum_rew=cumr, t5k=t5k,
-                            t_drop=t_drop, t_lapse=t_lapse, annual=pd.DataFrame(rows))
-
-        # 互動控制面板
-        col_u1, col_u2, col_u3 = st.columns(3)
-        with col_u1:
-            interactive_r = st.slider("每週回饋 R* (元/達標週)", 10.0, 60.0, float(R_STAR_DEFAULT), 1.0, key="tab1_r_slider")
-        with col_u2:
-            interactive_years = st.slider("資產觀測期 (年)", 1, 5, 5, 1, key="tab1_years_slider")
-        with col_u3:
-            profile_view_mode = st.selectbox("觀測運動特徵族群", ["全體總覽 (High / Medium / Low)", "High 高活躍族群", "Medium 典型保戶", "Low 低活躍族群"], key="tab1_profile_select")
-
-        # 執行模擬
-        @st.cache_data
-        def run_cached_user_sim(r_val):
-            return simulate_users(CFG, R=r_val, seed=2026)
-        
-        sim_results = run_cached_user_sim(interactive_r)
-        v_target = sim_results["value"][interactive_years]
-        stay_mask = (sim_results["t_drop"] >= interactive_years) & (sim_results["t_lapse"] >= interactive_years)
-        
-        if "High" in profile_view_mode:
-            target_indices = [0]
-            profile_label = "High 高活躍族群"
-        elif "Medium" in profile_view_mode:
-            target_indices = [1]
-            profile_label = "Medium 典型保戶"
-        elif "Low" in profile_view_mode:
-            target_indices = [2]
-            profile_label = "Low 低活躍族群"
-        else:
-            target_indices = [0, 1, 2]
-            profile_label = "全體總覽"
-
-        mask_profile = np.isin(sim_results["prof"], target_indices)
-        mask_stay_profile = mask_profile & stay_mask
-        
-        avg_val_display = v_target[mask_profile].mean()
-        stay_rate_display = mask_stay_profile.mean() * 100 if mask_profile.any() else 0
-        
-        t5k_vals = sim_results["t5k"][mask_profile]
-        pct_5k = (t5k_vals <= interactive_years).mean() * 100 if mask_profile.any() else 0
-
-        # 上方動態計量卡片
-        col_c1, col_c2, col_c3 = st.columns(3)
-        with col_c1:
-            st.markdown(f"""
-            <div class="metric-card" style="border-top: 4px solid #83A474;">
-                <div class="metric-value-green">NT$ {avg_val_display:,.0f}</div>
-                <div class="metric-label">{profile_label} 平均資產 ({interactive_years}年)</div>
-            </div>
-            """, unsafe_allow_html=True)
-        with col_c2:
-            st.markdown(f"""
-            <div class="metric-card" style="border-top: 4px solid #0C0E0B;">
-                <div class="metric-value-blue">{stay_rate_display:.1f}%</div>
-                <div class="metric-label">{profile_label} 長期續留率</div>
-            </div>
-            """, unsafe_allow_html=True)
-        with col_c3:
-            st.markdown(f"""
-            <div class="metric-card" style="border-top: 4px solid #92BA80;">
-                <div class="metric-value-green">{pct_5k:.1f}%</div>
-                <div class="metric-label">{profile_label} 達投資門檻 ($5,000) 比例</div>
-            </div>
-            """, unsafe_allow_html=True)
-
-        st.markdown("<br>", unsafe_allow_html=True)
-
-        # 圖像化一：跨期資產成長軌跡圖
-        yrs_axis = list(range(1, CFG.years + 1))
-        fig_asset = go.Figure()
-        
-        if len(target_indices) == 1:
-            g_idx = target_indices[0]
-            g_name = PROFILES_local[g_idx]
-            sub_path = [sim_results["value"][y][sim_results["prof"]==g_idx].mean() for y in range(1, CFG.years + 1)]
-            sub_stay_path = [sim_results["value"][y][(sim_results["prof"]==g_idx) & (sim_results["t_drop"]>=y) & (sim_results["t_lapse"]>=y)].mean() for y in range(1, CFG.years + 1)]
-            fig_asset.add_trace(go.Scatter(x=yrs_axis, y=sub_path, name=f"{g_name} 平均資產市值", line=dict(color=PCOL_local[g_idx], width=4)))
-            fig_asset.add_trace(go.Scatter(x=yrs_axis, y=sub_stay_path, name=f"{g_name} (全程參與)", line=dict(color="#2D4A22", width=3, dash="dot")))
-        else:
-            avg_path = [sim_results["value"][y].mean() for y in range(1, CFG.years + 1)]
-            medium_stay_path = [sim_results["value"][y][(sim_results["prof"]==1) & (sim_results["t_drop"]>=y) & (sim_results["t_lapse"]>=y)].mean() for y in range(1, CFG.years + 1)]
-            fig_asset.add_trace(go.Scatter(x=yrs_axis, y=avg_path, name="EcoStride 全體平均資產市值", line=dict(color="#83A474", width=4)))
-            fig_asset.add_trace(go.Scatter(x=yrs_axis, y=medium_stay_path, name="EcoStride (Medium 典型保戶, 全程參與)", line=dict(color="#2D4A22", width=3, dash="dot")))
-        
-        fig_asset.update_layout(
-            title=f"【{profile_label}】每位參加者平均累積價值對比 (R* = {interactive_r:.1f} 元／週)",
-            template="plotly_white",
-            height=380,
-            xaxis=dict(title="年度 (Year)"),
-            yaxis=dict(title="累積資產市值 (NT$)"),
-            margin=dict(l=40, r=40, t=40, b=40)
-        )
-        st.plotly_chart(fig_asset, use_container_width=True)
-
-        # 圖像化二：各族群資產分布箱形圖
-        col_g1, col_g2 = st.columns([1.2, 1])
-        with col_g1:
-            fig_box = go.Figure()
-            for g_idx in target_indices:
-                g_name = PROFILES_local[g_idx]
-                subset_vals = v_target[(sim_results["prof"] == g_idx) & stay_mask]
-                fig_box.add_trace(go.Box(
-                    y=subset_vals,
-                    name=g_name,
-                    marker_color=PCOL_local[g_idx],
-                    boxmean=True
-                ))
-            fig_box.update_layout(
-                title=f"第 {interactive_years} 年全程參與者資產分化箱形圖 ({profile_label})",
-                template="plotly_white",
-                height=340,
-                yaxis=dict(title="帳戶總市值 (NT$)"),
-                showlegend=False
-            )
-            st.plotly_chart(fig_box, use_container_width=True)
-
-        with col_g2:
-            st.markdown(f"<h5 style='color:#2D4A22; margin-top:5px;'>族群資產分化摘要表 ({profile_label})</h5>", unsafe_allow_html=True)
-            profile_stats = []
-            for g_idx in target_indices:
-                g_name = PROFILES_local[g_idx]
-                mask_g = sim_results["prof"] == g_idx
-                mask_stay = mask_g & stay_mask
-                profile_stats.append({
-                    "族群": g_name,
-                    "人數占比": f"{mask_g.mean()*100:.0f}%",
-                    "全程參與率": f"{mask_stay.mean()*100:.1f}%",
-                    "全程參與者平均": f"NT$ {v_target[mask_stay].mean():,.0f}" if mask_stay.any() else "N/A"
-                })
-            df_stats_sub = pd.DataFrame(profile_stats).set_index("族群")
-            st.dataframe(df_stats_sub, use_container_width=True)
-
-        st.markdown(f"""
-        <div class="alert-card">
-            <b>【消費者端研究核心結論】</b> 透過每週達標制（$R^* = {interactive_r:.1f}$ 元）與 3.5% 綠能實體資產票息再投資，
-            當前觀測的 <b>{profile_label}</b> 在第 {interactive_years} 年展現出穩健的生產性資本複利增長。
-        </div>
-        """, unsafe_allow_html=True)
 # ==========================================
     # 🏥 面向二：保險公司端研究
     # ==========================================
